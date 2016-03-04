@@ -33,11 +33,14 @@ mkdir bacteria_summaries && cd bacteria_summaries
      I'm testing to see if it will be in .txt file including the word
     "assembly".
 
--  It is recommended to run the following script in a `crontab`.  I don't quit
-
+-  It is recommended to run the following script in a `crontab`.  I don't quit 
    understand this script and was wondering if it's just as well to simply run
    
-`lftp -c 'open -e "mirror -c -p --no-empty-dirs -I *assembly*.txt -P=5 --log=lftp_log.txt genomes/genbank/bacteria /home/truthling/MGGen/ncbi_bacteria_mirror" ftp.ncbi.nlm.nih.gov'`
+```bash
+lftp -c 'open -e "mirror -c -p --no-empty-dirs -I *assembly*.txt -P=5
+--log=lftp_log.txt genomes/genbank/bacteria
+/home/truthling/MGGen/ncbi_bacteria_mirror" ftp.ncbi.nlm.nih.gov'
+```
    
    in a crontab?  Do you see anything in the script below that would suggest it is
    not safe to simply run the one liner above in a crontab?
