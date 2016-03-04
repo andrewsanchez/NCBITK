@@ -8,6 +8,7 @@ lftp -c 'open -e "mirror -c -p --no-empty-dirs -I *assembly*.txt -P=5 --log=lftp
 
 ** Get assembly summary for specific organism
 
+```bash
 #+BEGIN_SRC sh :tangle ncbi_get_organism
 wget -O Acinetobacter_nosocomialis_summary.txt ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/Acinetobacter_nosocomialis/assembly_summary.txt
 awk -F "\t" '/Acinetobacter/ {print $20}' Acinetobacter_nosocomialis_summary.txt | \
@@ -15,7 +16,7 @@ sed -r 's|(ftp://ftp.ncbi.nlm.nih.gov/genomes/all/)(GCA_.+)|\1\2/\2_genomic.fna.
 wget -P ./genome_files/ --input genome_urls.txt
 gunzip ./genome_files/*.gz
 #+END_SRC
-
+```
 ** Get assembly summary for all bacteria
 
 Since it downloads every summary as `assembly_summary.txt` in a separate directory named after the bacteria, we will have to copy and rename the files.  The files must remain in the structure that `lftp` puts them in in order to stay synced with NCBI.
@@ -30,7 +31,7 @@ for subdir in *; do cp ./$subdir/assembly_summary.txt ./renamed/$subdir.txt; don
 
 * Questions
 
-** It is recommended to run the following script in a ~crontab~.  I don't really understand this script and was wondering if it's just as well to simply run ~lftp -c 'open -e "mirror -c -p --no-empty-dirs -I *assembly*.txt -P=5 --log=lftp_log.txt /genomes/genbank/bacteria/ ~/MGGen/ncbi_bacteria_mirror" ftp.ncbi.nlm.nih.gov'~ in a crontab?
+- It is recommended to run the following script in a ~crontab~.  I don't really understand this script and was wondering if it's just as well to simply run ~lftp -c 'open -e "mirror -c -p --no-empty-dirs -I *assembly*.txt -P=5 --log=lftp_log.txt /genomes/genbank/bacteria/ /home/truthling/MGGen/ncbi_bacteria_mirror" ftp.ncbi.nlm.nih.gov'~ in a crontab?
 
 #+BEGIN_SRC shell
 #!/bin/bash

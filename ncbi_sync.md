@@ -3,7 +3,7 @@
 ## Sync with NCBI's ftp server
 
     # add time stamp to log file
-    lftp -c 'open -e "mirror -c -p --no-empty-dirs -I *assembly*.txt -P=5 --log=lftp_log.txt /genomes/genbank/bacteria/ ~/MGGen/ncbi_bacteria_mirror" ftp.ncbi.nlm.nih.gov'
+    lftp -c 'open -e "mirror -c -p --no-empty-dirs -I *assembly*.txt --log=lftp_log.txt /genomes/genbank/bacteria/ ~/MGGen/ncbi_bacteria_mirror" ftp.ncbi.nlm.nih.gov'
 
 ## Get assembly summary for specific organism
 
@@ -25,7 +25,11 @@ mkdir bacteria_summaries && cd bacteria_summaries
     for subdir in *; do cp ./$subdir/assembly_summary.txt ./renamed/$subdir.txt; done;
 ```
 
-# Questions and notes
+# Questions and notes and TODO
+
+- How to grep only the first line of a list produced by `ls -R` and count the number of lines that match?  For files in ls -R, head 1 | grep text and then wc -l on the total of all of those results 
+
+- Which files don't start with `# assembly`?
 
 -   Most organisms (~8K out of 12K) actually do NOT have the
     `assembly_summary.txt` file in the expected directory, and/or do not have
@@ -33,7 +37,7 @@ mkdir bacteria_summaries && cd bacteria_summaries
      I'm testing to see if it will be in .txt file including the word
     "assembly".
 
--  It is recommended to run the following script in a `crontab`.  I don't quit 
+-  It is recommended to run the following script in a `crontab`.  I don't quite
    understand this script and was wondering if it's just as well to simply run
    
 ```bash
