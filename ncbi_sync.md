@@ -29,7 +29,8 @@ mkdir bacteria_summaries && cd bacteria_summaries
 
 # Questions
 
-## It is recommended to run the following script in a `crontab`.  I don't really understand this script and was wondering if it's just as well to simply run ~lftp -c 'open -e "mirror -c -p &#x2013;no-empty-dirs -I **assembly**.txt -P=5 &#x2013;log=lftp<sub>log.txt</sub> *genomes/genbank/bacteria* ~/MGGen/ncbi<sub>bacteria</sub><sub>mirror</sub>" ftp.ncbi.nlm.nih.gov'~ in a crontab?
+-  It is recommended to run the following script in a `crontab`.  I don't really understand this script and was wondering if it's just as well to simply run ~lftp -c 'open -e "mirror -c -p --no-empty-dirs -I **assembly**.txt -P=5 --log=lftp_log.txt genomes/genbank/bacteria /home/truthling/MGGen/ncbi_bacteria_mirror"~ ftp.ncbi.nlm.nih.gov'~ in a crontab?
+
 
 ```bash
     #!/bin/bash
