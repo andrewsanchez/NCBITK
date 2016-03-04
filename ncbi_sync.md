@@ -19,7 +19,8 @@
 
 Since it downloads every summary as \`assembly<sub>summary.txt</sub>\` in a separate directory named after the bacteria, we will have to copy and rename the files.  The files must remain in the structure that \`lftp\` puts them in in order to stay synced with NCBI.
 
-```bash    mkdir bacteria_summaries && cd bacteria_summaries
+```bash
+mkdir bacteria_summaries && cd bacteria_summaries
     wget -rl 0 -A "*assembly*.txt" -nH --cut-dirs=3 --no-remove-listing ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria
     for subdir in *; do cp ./$subdir/assembly_summary.txt ./renamed/$subdir.txt; done;
 ```
