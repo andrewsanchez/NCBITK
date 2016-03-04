@@ -37,9 +37,7 @@ mkdir bacteria_summaries && cd bacteria_summaries
    understand this script and was wondering if it's just as well to simply run
    
 ```bash
-lftp -c 'open -e "mirror -c -p --no-empty-dirs -I *assembly*.txt -P=5
---log=lftp_log.txt genomes/genbank/bacteria
-/home/truthling/MGGen/ncbi_bacteria_mirror" ftp.ncbi.nlm.nih.gov'
+lftp -c 'open -e "mirror -c -p --no-empty-dirs -I *assembly*.txt -P=5 --log=lftp_log.txt genomes/genbank/bacteria /home/truthling/MGGen/ncbi_bacteria_mirror" ftp.ncbi.nlm.nih.gov'
 ```
    
    in a crontab?  Do you see anything in the script below that would suggest it is
