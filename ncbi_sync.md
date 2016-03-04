@@ -17,7 +17,7 @@
 
 ## Get assembly summary for all bacteria
 
-Since it downloads every summary as \`assembly<sub>summary.txt</sub>\` in a separate directory named after the bacteria, we will have to copy and rename the files.  The files must remain in the structure that \`lftp\` puts them in in order to stay synced with NCBI.
+Since it downloads every summary as `assembly_summary.txt` in a separate directory named after the bacteria, we will have to copy and rename the files.  The files must remain in the structure that `lftp` puts them in in order to stay synced with NCBI.
 
 ```bash
 mkdir bacteria_summaries && cd bacteria_summaries
@@ -25,12 +25,19 @@ mkdir bacteria_summaries && cd bacteria_summaries
     for subdir in *; do cp ./$subdir/assembly_summary.txt ./renamed/$subdir.txt; done;
 ```
 
--   It has come to my attention that most organisms (~8K out of 12K) do NOT have a \`assembly<sub>summary.txt</sub>\` file in the expected directory.  Running another test to find out where/if the equivalent file is located.
+# Questions and notes
 
-# Questions
+-   It has come to my attention that most organisms (~8K out of 12K) do NOT have a `assembly_summary.txt` file in the expected directory.  Running another test to find out where/if the equivalent file is located.
+-  It is recommended to run the following script in a `crontab`.  I don't quit
 
--  It is recommended to run the following script in a `crontab`.  I don't really understand this script and was wondering if it's just as well to simply run ~lftp -c 'open -e "mirror -c -p --no-empty-dirs -I **assembly**.txt -P=5 --log=lftp_log.txt genomes/genbank/bacteria /home/truthling/MGGen/ncbi_bacteria_mirror"~ ftp.ncbi.nlm.nih.gov'~ in a crontab?
-
+   understand this script and was wondering if it's just as well to simply run
+   
+       lftp -c 'open -e "mirror -c -p --no-empty-dirs -I *assembly*.txt -P=5
+   --log=lftp_log.txt genomes/genbank/bacteria
+   /home/truthling/MGGen/ncbi_bacteria_mirror" ftp.ncbi.nlm.nih.gov' 
+   
+   in a crontab?  Do you see anything in the script below that would suggest it is
+   not safe to simply run the one liner above in a crontab?
 
 ```bash
     #!/bin/bash
