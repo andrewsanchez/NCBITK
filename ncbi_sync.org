@@ -1,5 +1,5 @@
 * Bash code
-** TODO Are GCA files every altered?
+** TODO Are GCA files ever altered?
 ** rsync
 
 #+BEGIN_SRC bash
