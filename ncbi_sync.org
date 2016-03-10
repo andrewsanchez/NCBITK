@@ -1,28 +1,37 @@
 * Bash code
+** TODO Are GCA files every altered?
 ** rsync
 
-#+BEGIN_SRC sh
-rsync -iPrLtm -f="+ *.fna.gz" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/genbank/bacteria/Acinetobacter_nosocomialis ./rsync_ncbi_bacteria/
+#+BEGIN_SRC bash
+#!/bin/bash
+
+organism="bacteria/Acinetobacter_nosocomialis/" # or "bacteria/" for all bacteria
+directory="./rsync_Acinetobacter_nosocomialis/" # directory will be created if doesn't already exist
+files=".fna.gz"
+
+rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/genbank/"$organism" "$directory" 
 
 # -c, --checksum              skip based on checksum, not mod-time & size
 # -i, --itemize-changes       output a change-summary for all updates
 # -P, --partial, --progress   show progress and put partially downloaded files in a folder
-# -t, --times                 preserve modification times
-# -L, --copy-links            transform symlink into referent file/dir
 # -r, --recursive             recurse into directories
+# -L, --copy-links            transform symlink into referent file/dir
+# -t, --times                 preserve modification times
 # -m, --prune-empty-dirs      prune empty directory chains from file-list
 
 #+END_SRC
 
-
-** lftp - Sync with NCBI's ftp server
+* Everything below is probably not needed anymore, now that we have rsync.
+** lftp
+*** Sync with NCBI's ftp server
 
 #+BEGIN_SRC sh :tangle ncbi_sync
 # add time stamp to log file
-lftp -c 'open -e "mirror -cf - --no-empty-dirs -I *assembly*.txt -P=5 --log=lftp_log.txt /genomes/genbank/bacteria/ ~/MGGen/ncbi_bacteria_mirror" ftp.ncbi.nlm.nih.gov'f
+lftp -c 'open -e "mirror -cf - --no-empty-dirs -I *assembly*.txt -P=5 --log=lftp_log.txt /genomes/genbank/bacteria/ ~/MGGen/ncbi_bacteria_mirror" ftp.ncbi.nlm.nih.gov'
 #+END_SR
 
-** Get assembly summary for specific organism
+** wget
+*** assembly summary for specific organism
 
 #+BEGIN_SRC sh :tangle ncbi_get_organism
 wget -O Acinetobacter_nosocomialis_summary.txt ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/Acinetobacter_nosocomialis/assembly_summary.txt
@@ -32,7 +41,7 @@ wget -P ./genome_files/ --input genome_urls.txt
 gunzip ./genome_files/*.gz
 #+END_SRC
  
-** Get assembly summary for all bacteria
+*** assembly summary for all bacteria
 
 Since it downloads every summary as `assembly_summary.txt` in a separate directory named after the bacteria, we will have to copy and rename the files.  The files must remain in the structure that `lftp` puts them in in order to stay synced with NCBI.
 
@@ -43,8 +52,7 @@ for subdir in *; do cp ./$subdir/assembly_summary.txt ./renamed/$subdir.txt; don
 #+END_SRC
 
 - It has come to my attention that most organisms (~8K out of 12K) do NOT have a `assembly_summary.txt` file in the expected directory.  Running another test to find out where/if the equivalent file is located.
-
-* Questions
+** Questions
 
 - It is recommended to run the following script in a ~crontab~.  I don't really understand this script and was wondering if it's just as well to simply run ~lftp -c 'open -e "mirror -c -p --no-empty-dirs -I *assembly*.txt -P=5 --log=lftp_log.txt /genomes/genbank/bacteria/ /home/truthling/MGGen/ncbi_bacteria_mirror" ftp.ncbi.nlm.nih.gov'~ in a crontab?
 

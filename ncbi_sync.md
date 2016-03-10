@@ -9,8 +9,6 @@ lftp -c 'open -e "mirror -c -p --no-empty-dirs -I *assembly*.txt -P=5 --log=lftp
 
 ## Get assembly summary for specific organism
 
-\`\`\`bash
-
 ```sh
 wget -O Acinetobacter_nosocomialis_summary.txt ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/Acinetobacter_nosocomialis/assembly_summary.txt
 awk -F "\t" '/Acinetobacter/ {print $20}' Acinetobacter_nosocomialis_summary.txt | \
@@ -18,8 +16,6 @@ sed -r 's|(ftp://ftp.ncbi.nlm.nih.gov/genomes/all/)(GCA_.+)|\1\2/\2_genomic.fna.
 wget -P ./genome_files/ --input genome_urls.txt
 gunzip ./genome_files/*.gz
 ```
-
-\`\`\`
 
 ## Get assembly summary for all bacteria
 
