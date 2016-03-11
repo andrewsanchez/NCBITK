@@ -24,6 +24,8 @@ find "$directory" -type f -exec cp -t '/home/truthling/MGGen/renamed/' -- {} +
 
 python3 "$renamescript"
 
+# add line for decompressing files
+
 # --exclude-from=FILE     read exclude patterns from FILE
 # --include-from=FILE     read include patterns from FILE
 # -c, --checksum              skip based on checksum, not mod-time & size
