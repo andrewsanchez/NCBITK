@@ -1,26 +1,27 @@
-* Bash code
+* rsync
 
-** TODO Are GCA files ever altered?
+#+BEGIN_SRC sh :tangle rsync_ncbi
 
-** rsync
-
-#+BEGIN_SRC bash
-#!/bin/bash
-
-include="rsync_include.txt"
-exclude="rsync_exclude.txt"
-organism="bacteria/Acinetobacter_nosocomialis/" # or "bacteria/" for all bacteria
-directory="./rsync_Acinetobacter_nosocomialis/" # directory will be created if doesn't already exist
+# include="rsync_include.txt"
+# exclude="rsync_exclude.txt"
+organism="Acinetobacter_nosocomialis" # set this to just "*" for all bacteria
+location="bacteria/"$organism"/latest_assembly_versions/"
+directory="/home/truthling/MGGen/rsync_Acinetobacter_nosocomialis/" # must be relative; will be created if doesn't already exist
 files=".fna.gz"
 
-rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/genbank/"$organism" "$directory" 
+# figure out which folders to exclude, e.g. unplaced_scaffolds, etc.
 
-rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" -f="- all_assembly_versions" ftp.ncbi.nlm.nih.gov::genomes/genbank/"$organism" "$directory" 
+rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/genbank/"$location" "$directory"
 
-rsync -iPrLtm -f="+ *"$files"" -f="+ latest_assembly_versions" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/genbank/"$organism" "$directory" 
+# these two below produce the same results as the one above
+# rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/genbank/"$location" $directory 
+# rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" -f="- all_assembly_versions" ftp.ncbi.nlm.nih.gov::genomes/genbank/"$location" "$directory"
 
-rsync -iPrLtm -f="+ *.fna.gz" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/genbank/bacteria/*/latest_assembly_versions .rsync_test 
+# cp only the files to separate directory for renaming
 
+# Make sure this is only running once, after all files are downloaded.
+
+sudo find "$directory" -type f -exec cp -t '/home/truthling/MGGen/renamed/' -- {} +
 
 # --exclude-from=FILE     read exclude patterns from FILE
 # --include-from=FILE     read include patterns from FILE
@@ -33,6 +34,36 @@ rsync -iPrLtm -f="+ *.fna.gz" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/g
 # -m, --prune-empty-dirs      prune empty directory chains from file-list
 
 #+END_SRC
+* rename
+
+#+BEGIN_SRC python :tangle rename.py
+import pandas as pd
+import os
+
+# wget ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt
+summary = '/home/truthling/MGGen/renamed/assembly_summary.txt'
+genome_files = '/home/truthling/MGGen/Acinetobacter_nosocomialis/genome_files/'
+df = pd.read_csv(summary, delimiter='\t', index_col=0)
+copiedfiles = '/home/truthling/MGGen/renamed/'
+
+for f in os.listdir(copiedfiles"):
+    if f.startswith('GCA'):
+        id = (f.split('_')[0:2])
+        id = ('_'.join(id))
+        
+    for row in df.index:
+        if id == row:
+            org_name = df.get_value(id, 'organism_name')
+            strain = df.get_value(id, 'infraspecific_name').strip('strain=')
+            assembly_level = df.get_value(id, 'assembly_level')
+            newname = '{}_{}_{}_{}.fasta'.format(id, org_name, strain, assembly_level)
+            os.rename(f, newname)
+#+END_SRC
+
+
+* Notes on structure of the ftp site
+- The GenBank directory area includes genome sequence data for a larger number of organisms than the RefSeq directory area; however, some assemblies are unannotated.
+- ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/assembly_summary_genbank.txt
 
 
 * Everything below is probably not needed anymore, now that we have rsync.
@@ -98,4 +129,3 @@ EOF
     exit
 fi
 #+END_SRC
-
