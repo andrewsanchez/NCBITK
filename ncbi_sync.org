@@ -1,16 +1,29 @@
 * Bash code
+
 ** TODO Are GCA files ever altered?
+
 ** rsync
 
 #+BEGIN_SRC bash
 #!/bin/bash
 
+include="rsync_include.txt"
+exclude="rsync_exclude.txt"
 organism="bacteria/Acinetobacter_nosocomialis/" # or "bacteria/" for all bacteria
 directory="./rsync_Acinetobacter_nosocomialis/" # directory will be created if doesn't already exist
 files=".fna.gz"
 
 rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/genbank/"$organism" "$directory" 
 
+rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" -f="- all_assembly_versions" ftp.ncbi.nlm.nih.gov::genomes/genbank/"$organism" "$directory" 
+
+rsync -iPrLtm -f="+ *"$files"" -f="+ latest_assembly_versions" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/genbank/"$organism" "$directory" 
+
+rsync -iPrLtm -f="+ *.fna.gz" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/genbank/bacteria/*/latest_assembly_versions .rsync_test 
+
+
+# --exclude-from=FILE     read exclude patterns from FILE
+# --include-from=FILE     read include patterns from FILE
 # -c, --checksum              skip based on checksum, not mod-time & size
 # -i, --itemize-changes       output a change-summary for all updates
 # -P, --partial, --progress   show progress and put partially downloaded files in a folder
@@ -20,6 +33,7 @@ rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/
 # -m, --prune-empty-dirs      prune empty directory chains from file-list
 
 #+END_SRC
+
 
 * Everything below is probably not needed anymore, now that we have rsync.
 ** lftp
