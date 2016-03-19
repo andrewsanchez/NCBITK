@@ -14,7 +14,7 @@ renamescript="/home/truthling/MGGen/NCBI_tools/rename.python"
 rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/genbank/"$location" "$directory"
 
 # these two below produce the same results as the one above
-# rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/genbank/"$location" $directory 
+# rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/genbank/"$location" $directory
 # rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" -f="- all_assembly_versions" ftp.ncbi.nlm.nih.gov::genomes/genbank/"$location" "$directory"
 
 # cp only the files to separate directory for renaming
