@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# include="rsync_include.txt"
+# exclude="rsync_exclude.txt"
+organism="Acinetobacter_nosocomialis"
+location="bacteria/"$organism"/latest_assembly_versions/" # or "bacteria/*/latest_assembly_versions" for all bacteria
+directory="../rsync_Acinetobacter_nosocomialis/" # must be relative; will be created if doesn't already exist
+files=".fna.gz"
+
+rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/genbank/"$location" $directory 
+
+# rsync -iPrLtm -f="+ *.fna.gz" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/genbank/bacteria/*/latest_assembly_versions ~/MGGen/rsync_Acinetobacter_nosocomialis
