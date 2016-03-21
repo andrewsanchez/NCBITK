@@ -1,15 +1,24 @@
 #!/bin/bash
 
 # run as sudo
+# takes one argument for organism name
+# must match folder name at ftp.ncbi.nlm.nih.gov::genomes/genbank/bacteria
+# e.g. Escherichia_coli
+# pass "\*" without quotes to sync with entire bacteria database
 
-organism="Escherichia_coli" # set this to just "*" for all bacteria
+organism="$1"
 location="bacteria/"$organism"/latest_assembly_versions/"
-directory="/home/truthling/MGGen/"$organism"" # must be relative; will be created if doesn't already exist
+mirror="./"$organism"" must be relative; will be created if doesn't already exist
+localcopies="$mirror"_local
 files=".fna.gz"
 
-# figure out which folders to exclude, e.g. unplaced_scaffolds, etc.
+mkdir -p "$mirror"
+mkdir -p "$localcopies"
 
-rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" -f="- all_assembly_versions" ftp.ncbi.nlm.nih.gov::genomes/genbank/"$location" "$directory"
+rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" -f="- all_assembly_versions" -in --log-file=log.txt ftp.ncbi.nlm.nih.gov::genomes/genbank/"$location" "$mirror"
+
+sudo find "$mirror" -type f -exec cp -t "$localcopies" -- {} +
+# sudo python /home/truthling/MGGen/NCBI_tools/rename.py
 
 # --exclude-from=FILE     read exclude patterns from FILE
 # --include-from=FILE     read include patterns from FILE
@@ -20,7 +29,3 @@ rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" -f="- all_assembly_versions" f
 # -L, --copy-links            transform symlink into referent file/dir
 # -t, --times                 preserve modification times
 # -m, --prune-empty-dirs      prune empty directory chains from file-list
-
-mkdir -p "$directory"_local/
-sudo find "$directory" -type f -exec cp -t ""$directory"_local/" -- {} +
-
