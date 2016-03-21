@@ -1,11 +1,10 @@
 import pandas as pd
 import os
-
-# wget ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt
+import sys
 
 summary = '/home/truthling/MGGen/assembly_summary.txt'
 df = pd.read_csv(summary, delimiter='\t', index_col=0)
-copiedfiles = '/home/truthling/MGGen/Acinetobacter_nosocomialis_local/'
+copiedfiles = sys.argv[1]
 
 df.update(df['infraspecific_name'][(df['infraspecific_name'].isnull()) & (df['isolate'].isnull())].fillna('NA'))
 df.update(df['infraspecific_name'][(df['infraspecific_name'].isnull()) & (df['isolate'].notnull())].fillna(df['isolate']))

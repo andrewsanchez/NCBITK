@@ -1,21 +1,21 @@
 #!/bin/bash
 
 # run as sudo
-# takes one argument for organism name
+# takes one argument for you want organism name
 # must match folder name at ftp.ncbi.nlm.nih.gov::genomes/genbank/bacteria
 # e.g. Escherichia_coli
 # pass "\*" without quotes to sync with entire bacteria database
 
 organism="$1"
 location="bacteria/"$organism"/latest_assembly_versions/"
-mirror="./"$organism"" must be relative; will be created if doesn't already exist
+mirror="./"$organism""
 localcopies="$mirror"_local
 files=".fna.gz"
 
 mkdir -p "$mirror"
 mkdir -p "$localcopies"
 
-rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" -f="- all_assembly_versions" -in --log-file=log.txt ftp.ncbi.nlm.nih.gov::genomes/genbank/"$location" "$mirror"
+rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" -f="- all_assembly_versions" --log-file=log.txt ftp.ncbi.nlm.nih.gov::genomes/genbank/"$location" "$mirror"
 
 sudo find "$mirror" -type f -exec cp -t "$localcopies" -- {} +
 # sudo python /home/truthling/MGGen/NCBI_tools/rename.py
@@ -29,3 +29,4 @@ sudo find "$mirror" -type f -exec cp -t "$localcopies" -- {} +
 # -L, --copy-links            transform symlink into referent file/dir
 # -t, --times                 preserve modification times
 # -m, --prune-empty-dirs      prune empty directory chains from file-list
+# -n, --dry-run               perform a trial run with no changes made
