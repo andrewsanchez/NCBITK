@@ -15,9 +15,10 @@ files=".fna.gz"
 mkdir -p "$mirror"
 mkdir -p "$localcopies"
 
-rsync -iPrLtm -f="+ *"$files"" -f="+ */" -f="- *" -f="- all_assembly_versions" --log-file=log.txt ftp.ncbi.nlm.nih.gov::genomes/genbank/"$location" "$mirror"
+rsync -iPrLtmn -f="+ -f="- **unplaced_scaffolds**" *"$files"" -f="+ */" -f="- *" -f="- */unplaced_scaffolds/*" --log-file=log.txt ftp.ncbi.nlm.nih.gov::genomes/genbank/"$location" "$mirror"
 
 sudo find "$mirror" -type f -exec cp -t "$localcopies" -- {} +
+
 # sudo python /home/truthling/MGGen/NCBI_tools/rename.py
 
 # --exclude-from=FILE     read exclude patterns from FILE
