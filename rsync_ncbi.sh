@@ -1,23 +1,22 @@
 #!/bin/bash
 
 # run as sudo
-# takes one argument for you want organism name
-# must match folder name at ftp.ncbi.nlm.nih.gov::genomes/genbank/bacteria
+# takes one argument for organism you want
+# must match a directory name at ftp.ncbi.nlm.nih.gov::genomes/genbank/bacteria
 # e.g. Escherichia_coli
 # pass "\*" without quotes to sync with entire bacteria database
 
 organism="$1"
-location="bacteria/"$organism"/latest_assembly_versions/"
-mirror="./"$organism""
-localcopies="$mirror"_local
-files=".fna.gz"
+ftplocation="bacteria/"$organism"/latest_assembly_versions/"
+ftpmirror="./"$organism""
+justfastas="$ftpmirror"_local
 
-mkdir -p "$mirror"
-mkdir -p "$localcopies"
+mkdir -p "$ftpmirror"
+mkdir -p "$justfastas"
 
-rsync -iPrLtmn -f="+ -f="- **unplaced_scaffolds**" *"$files"" -f="+ */" -f="- *" -f="- */unplaced_scaffolds/*" --log-file=log.txt ftp.ncbi.nlm.nih.gov::genomes/genbank/"$location" "$mirror"
+rsync -iPrLtm -f="- **unplaced_scaffolds**" -f="+ *.fna.gz" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/genbank/"$ftplocation" "$ftpmirror"
 
-sudo find "$mirror" -type f -exec cp -t "$localcopies" -- {} +
+sudo find "$ftpmirror" -type f -exec cp -t "$justfastas" -- {} +
 
 # sudo python /home/truthling/MGGen/NCBI_tools/rename.py
 
