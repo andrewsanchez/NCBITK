@@ -1,28 +1,34 @@
+#!/usr/bin/env python
+
 import sys
 import subprocess
-
-#organism="$1"
-#ftplocation="bacteria/"$organism"/latest_assembly_versions/"
-#ftpmirror="./"$organism""
-#justfastas="$ftpmirror"_local
-#mkdir -p "$justfastas"
+import os
 
 organism = sys.argv[1]
-local_mirrior = sys.argv[2]
+local_mirror = sys.argv[2]
 ftp_directory = 'bacteria/' + organism + '/latest_assembly_versions/'
+just_fastas = local_mirror + '_local'
 
-if organism = '*':
 subprocess.run(['rsync',
-                '-iPrLtm',
+                '-iPrLtmn',
                 '-f="- **unplaced_scaffolds**"',
                 '-f="+ *.fna.gz"',
                 '-f="+ */"',
                 '-f="- *"',
                 'ftp.ncbi.nlm.nih.gov::genomes/genbank/' + ftp_directory,
-                '"$ftpmirror"',
-                shell=True
-])
+                local_mirror,])
 
-rsync -iPrLtm -f="- **unplaced_scaffolds**" -f="+ *.fna.gz" -f="+ */" -f="- *" ftp.ncbi.nlm.nih.gov::genomes/genbank/"$ftplocation" "$ftpmirror"
+if os.path.isdir(just_fastas):
+    subprocess.run(['find', organism, '-type', 'f',
+                '-exec', 'cp',
+                '-t', just_fastas,
+                '-- {}', '+'])
 
-sudo find "$ftpmirror" -type f -exec cp -t "$justfastas" -- {} +
+else:
+    os.mkdir(just_fastas)
+    subprocess.run(['find', organism, '-type', 'f',
+                '-exec', 'cp',
+                '-t', just_fastas,
+                '-- {}', '+'])
+
+# sudo find "$ftpmirror" -type f -exec cp -t "$justfastas" -- {} +
