@@ -1,17 +1,23 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 import subprocess
 import os
 import pandas as pd
 
-organism = sys.argv[1]
-local_mirror = sys.argv[2]
+try:
+    organism = sys.argv[1]
+    local_mirror = sys.argv[2]
+    summary = sys.argv[3]
+except:
+    print("usage: script organism directory assembly_summary.txt")
+    sys.exit()
 ftp_directory = 'bacteria/' + organism + '/latest_assembly_versions/'
 just_fastas = local_mirror + '_fastas/'
+print(just_fastas)
 
 if os.path.isdir(organism):
-    subprocess.run(['rsync',
+    subprocess.call(['rsync',
                     '-iPrLtm',
                     '--exclude=**/unplaced_scaffolds/**',
                     '-f=+ *.fna.gz',
@@ -23,7 +29,7 @@ if os.path.isdir(organism):
 
 else:
     os.mkdir(organism)
-    subprocess.run(['rsync',
+    subprocess.call(['rsync',
                     '-iPrLtm',
                     '--exclude=**/unplaced_scaffolds/**',
                     '-f=+ *.fna.gz',
@@ -35,20 +41,20 @@ else:
 
 # copy just fastas from local NCBI mirror to just_fastas directory
 if os.path.isdir(just_fastas):
-    subprocess.run(['sudo', 'find', organism, '-type', 'f',
+    subprocess.call(['sudo', 'find', local_mirror, '-type', 'f',
                     '-exec', 'cp',
                     '-t', just_fastas,
                     '-- {}', '+'])
 
 else:
     os.mkdir(just_fastas)
-    subprocess.run(['find', organism, '-type', 'f',
+    subprocess.call(['find', local_mirror, '-type', 'f',
                 '-exec', 'cp',
                 '-t', just_fastas,
                 '-- {}', '+'])
 
 # Rename files in just_fastas directory
-summary = sys.argv[3]
+#summary = sys.argv[3]
 df = pd.read_csv(summary, delimiter='\t', index_col=0)
 
 df.update(df['infraspecific_name'][(df['infraspecific_name'].isnull()) & (df['isolate'].isnull())].fillna('NA'))
@@ -75,4 +81,5 @@ for f in os.listdir(just_fastas):
             os.rename(old, new)
 
 # Decompress files in just_fastas directory
-subprocess.run(['pigz', '-d', just_fastas+'*.fna.gz'])
+subprocess.call(['pigz', '-d', just_fastas+'*.fna.gz'])
+jsahl@bio653:~/database$
