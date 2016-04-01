@@ -7,6 +7,8 @@ import pandas as pd
 
 organism = sys.argv[1]
 local_mirror = sys.argv[2]
+summary = sys.argv[3]
+
 ftp_directory = 'bacteria/' + organism + '/latest_assembly_versions/'
 just_fastas = local_mirror + '_fastas/'
 
@@ -48,7 +50,6 @@ else:
                 '-- {}', '+'])
 
 # Rename files in just_fastas directory
-summary = sys.argv[3]
 df = pd.read_csv(summary, delimiter='\t', index_col=0)
 
 df.update(df['infraspecific_name'][(df['infraspecific_name'].isnull()) & (df['isolate'].isnull())].fillna('NA'))
@@ -75,4 +76,4 @@ for f in os.listdir(just_fastas):
             os.rename(old, new)
 
 # Decompress files in just_fastas directory
-subprocess.run(['pigz', '-d', just_fastas+'*.fna.gz'])
+# subprocess.run(['pigz', '-d', just_fastas+'*.fna.gz'])
