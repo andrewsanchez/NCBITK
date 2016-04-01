@@ -23,6 +23,7 @@ for f in os.listdir(just_fastas):
         correctly_named.append(f)
     else:
         incorrectly_named.append(f)
+    fasta.close()
 
 print('Total number of files:  {}'.format(len(fna_files)))
 print('Correctly named files:  {}'.format(len(correctly_named)))

@@ -16,7 +16,7 @@ if os.path.isdir(local_mirror):
     subprocess.run(['rsync',
                     '-iPrLtm',
                     '--exclude=**/unplaced_scaffolds/**',
-                    '-f=+ *.fna.gz',
+                    '-f=+ GCA*.fna.gz',
                     '-f=+ */',
                     '--exclude=*',
                     'ftp.ncbi.nlm.nih.gov::genomes/genbank/' + ftp_directory,
