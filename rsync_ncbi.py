@@ -12,7 +12,7 @@ summary = sys.argv[3]
 ftp_directory = 'bacteria/' + organism + '/latest_assembly_versions/'
 just_fastas = local_mirror + '_fastas/'
 
-if os.path.isdir(organism):
+if os.path.isdir(local_mirror):
     subprocess.run(['rsync',
                     '-iPrLtm',
                     '--exclude=**/unplaced_scaffolds/**',
@@ -24,7 +24,7 @@ if os.path.isdir(organism):
                     local_mirror])
 
 else:
-    os.mkdir(organism)
+    os.mkdir(local_mirror)
     subprocess.run(['rsync',
                     '-iPrLtm',
                     '--exclude=**/unplaced_scaffolds/**',

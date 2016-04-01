@@ -13,9 +13,9 @@ fna_files = []
 correctly_named = []
 incorrectly_named = []
 
-for f in os.listdir('just_fastas'):
+for f in os.listdir(just_fastas):
     fna_files.append(f)
-    abs_path = 'just_fastas' + f
+    abs_path = just_fastas + f
     fasta = open(abs_path, 'r')
     line = fasta.readline()
     organism = f.split('_')[2:3]
@@ -24,20 +24,27 @@ for f in os.listdir('just_fastas'):
         correctly_named.append(f)
     else:
         incorrectly_named.append(f)
-# print('Correctly named files:  {}'.format(len(correctly_named)))
-# print('Incorrectly named files:  {}'.format(len(incorrectly_named)))
-# print('Total number of files:  {}'.format(len(fna_files)))
+
+print('Total number of files:  {}'.format(len(fna_files)))
+print('Correctly named files:  {}'.format(len(correctly_named)))
+print('Incorrectly named files:  {}'.format(len(incorrectly_named)))
+print('\n')
 
 for f in incorrectly_named:
-    abs_path = 'just_fastas' + f
+    abs_path = just_fastas + f
     fasta = open(abs_path, 'r')
     line = fasta.readline()
-    organism = f.split('_')[2:3]
-    organism = '_'.join(organism)
+    print(line)
+
+    #organism = f.split('_')[2:3]
+    #organism = '_'.join(organism)
+    #print(organism + '<- Filename')
+    print(f)
+
     id = (f.split('_')[0:2])
     id = ('_'.join(id))
-    print(organism)
-    print(line)
     for row in df.index:
         if id == row:
             print(df.get_value(id, 'organism_name'))
+
+print('\n')
