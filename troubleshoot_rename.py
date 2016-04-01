@@ -3,7 +3,6 @@
 import pandas as pd
 import os
 import sys
-import subprocess
 
 just_fastas = sys.argv[1] # *_just_fastas
 summary = sys.argv[2] # assembly_summary.txt
