@@ -5,8 +5,8 @@ import os
 import sys
 import subprocess
 
-just_fastas = sys.argv[1]
-summary = 'assembly_summary.txt'
+just_fastas = sys.argv[1] # *_just_fastas
+summary = sys.argv[2] # assembly_summary.txt
 df = pd.read_csv(summary, delimiter='\t', index_col=0)
 
 fna_files = []
@@ -18,6 +18,8 @@ for f in os.listdir('just_fastas'):
     abs_path = 'just_fastas' + f
     fasta = open(abs_path, 'r')
     line = fasta.readline()
+    organism = f.split('_')[2:3]
+    organism = '_'.join(organism)
     if organism in line:
         correctly_named.append(f)
     else:
@@ -27,19 +29,15 @@ for f in os.listdir('just_fastas'):
 # print('Total number of files:  {}'.format(len(fna_files)))
 
 for f in incorrectly_named:
-    id = (f.split('_')[0:2])
-    id = ('_'.join(id))
-    organism = f.split('_')[2:3]
-    organism = '_'.join(organism)
     abs_path = 'just_fastas' + f
     fasta = open(abs_path, 'r')
     line = fasta.readline()
+    organism = f.split('_')[2:3]
+    organism = '_'.join(organism)
+    id = (f.split('_')[0:2])
+    id = ('_'.join(id))
+    print(organism)
     print(line)
     for row in df.index:
         if id == row:
             print(df.get_value(id, 'organism_name'))
-    
-#     print(f)
-    abs_path = 'just_fastas' + f
-    fna = open(abs_path, 'r')
-#     print(fna.readline())
