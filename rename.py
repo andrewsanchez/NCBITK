@@ -31,5 +31,3 @@ for f in os.listdir(just_fastas):
             old = just_fastas+f
             new = just_fastas+newname
             os.rename(old, new)
-
-# subprocess.run(['gunzip', '-f', '/home/truthling/MGGen/Acinetobacter_nosocomialis_fastas/*.fna.gz'])

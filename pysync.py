@@ -32,7 +32,7 @@ if not os.path.isdir(all_fastas):
     os.mkdir(all_fastas)
 
 dirs = ftp.nlst()
-for organism in dirs[0:100]: # sync with any number of folders with dirs[n:n2]
+for organism in dirs: # sync with any number of folders with dirs[n:n2]
     print(str(dirs.index(organism))+ ' out of ' + str(len(dirs)))
 
     single_organism = all_fastas + organism + '/'
