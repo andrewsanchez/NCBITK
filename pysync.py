@@ -11,7 +11,8 @@ ftp.login()
 ftp.cwd('genomes/genbank/bacteria')
 
 local_mirror = 'genbank_bacteria/'
-all_fastas = local_mirror + '_fastas'
+all_fastas = local_mirror.strip('/') + '_fastas/'
+
 if not os.path.isdir(local_mirror):
     os.mkdir(local_mirror)
 
@@ -22,7 +23,7 @@ dirs = ftp.nlst()
 for organism in dirs[0:100]:
     print(str(dirs.index(organism))+ ' out of ' + str(len(dirs)))
 
-    just_fastas = local_mirror + organism + '_fastas'
+    just_fastas = all_fastas + organism
     subprocess.run(['rsync',
                     '-iPrLt',
                     '-f=+ GCA*fna.gz',
@@ -41,7 +42,7 @@ for organism in dirs[0:100]:
 
         subprocess.run(['sudo', 'find', just_fastas, '-name', '*.gz',
                         '-exec', 'pigz',
-                        '-d', 
+                        '-d',
                         '-- {}', '+'])
     else:
         os.mkdir(just_fastas)
@@ -53,5 +54,5 @@ for organism in dirs[0:100]:
 
         subprocess.run(['sudo', 'find', just_fastas, '-name', '*.gz',
                         '-exec', 'pigz',
-                        '-d', 
+                        '-d',
                         '-- {}', '+'])
