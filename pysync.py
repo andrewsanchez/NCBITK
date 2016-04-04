@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
+import os
 import sys
 import subprocess
-import os
 import pandas as pd
 from ftplib import FTP
 
@@ -11,7 +11,10 @@ ftp = FTP(ftp_site)
 ftp.login()
 ftp.cwd('genomes/genbank/bacteria')
 
-summary = 'assembly_summary.txt' # location of assembly_summary.txt
+local_mirror = sys.argv[1]
+all_fastas = local_mirror.strip('/') + '_fastas/'
+summary = sys.argv[2] # location of assembly_summary.txt
+
 df = pd.read_csv(summary, delimiter='\t', index_col=0)
 
 df.update(df['infraspecific_name'][(df['infraspecific_name'].isnull()) & (df['isolate'].isnull())].fillna('NA'))
@@ -22,9 +25,6 @@ df.infraspecific_name.replace({'[ =\-\;]': '_'}, regex=True, inplace=True)
 df.infraspecific_name.replace({'[\W]': ''}, regex=True, inplace=True)
 df.assembly_level.replace({' ': '_'}, regex=True, inplace=True)
 
-local_mirror = 'genbank_bacteria/'
-all_fastas = local_mirror.strip('/') + '_fastas/'
-
 if not os.path.isdir(local_mirror):
     os.mkdir(local_mirror)
 
@@ -32,10 +32,10 @@ if not os.path.isdir(all_fastas):
     os.mkdir(all_fastas)
 
 dirs = ftp.nlst()
-for organism in dirs[0:100]:
+for organism in dirs[0:100]: # sync with any number of folders with dirs[n:n2]
     print(str(dirs.index(organism))+ ' out of ' + str(len(dirs)))
 
-    just_fastas = all_fastas + organism + '/'
+    single_organism = all_fastas + organism + '/'
     subprocess.run(['rsync',
                     '-iPrLt',
                     '-f=+ GCA*fna.gz',
@@ -45,40 +45,39 @@ for organism in dirs[0:100]:
                     'ftp.ncbi.nlm.nih.gov::genomes/genbank/bacteria/' + organism + '/latest_assembly_versions/',
                     '--log-file=log.txt',
                     local_mirror + organism])
-    if os.path.isdir(just_fastas):
+    if os.path.isdir(single_organism):
         organism = local_mirror + organism
         subprocess.run(['sudo', 'find', organism, '-type', 'f',
                         '-exec', 'cp',
-                        '-t', just_fastas,
+                        '-t', single_organism,
                         '-- {}', '+'])
 
-        subprocess.run(['sudo', 'find', just_fastas, '-name', '*.gz',
+        subprocess.run(['sudo', 'find', single_organism, '-name', '*.gz',
                         '-exec', 'pigz',
                         '-d',
                         '-- {}', '+'])
     else:
-        os.mkdir(just_fastas)
+        os.mkdir(single_organism)
         organism = local_mirror + organism
         subprocess.run(['find', organism, '-type', 'f',
                     '-exec', 'cp',
-                    '-t', just_fastas,
+                    '-t', single_organism,
                     '-- {}', '+'])
 
-        subprocess.run(['sudo', 'find', just_fastas, '-name', '*.gz',
+        subprocess.run(['sudo', 'find', single_organism, '-name', '*.gz',
                         '-exec', 'pigz',
                         '-d',
                         '-- {}', '+'])
 
-    for f in os.listdir(just_fastas):
+    for f in os.listdir(single_organism):
         id = (f.split('_')[0:2])
         id = ('_'.join(id))
 
-        for row in df.index:
-            if id == row:
-                org_name = df.get_value(id, 'organism_name')
-                strain = df.get_value(id, 'infraspecific_name').strip('strain=')
-                assembly_level  = df.get_value(id, 'assembly_level')
-                newname = '{}_{}{}_{}.fna'.format(id, org_name, strain, assembly_level)
-                old = just_fastas+f
-                new = just_fastas+newname
-                os.rename(old, new)
+        if id in df.index:
+            org_name = df.get_value(id, 'organism_name')
+            strain = df.get_value(id, 'infraspecific_name').strip('strain=')
+            assembly_level  = df.get_value(id, 'assembly_level')
+            newname = '{}_{}{}_{}.fna'.format(id, org_name, strain, assembly_level)
+            old = single_organism+f
+            new = single_organism+newname
+            os.rename(old, new)
