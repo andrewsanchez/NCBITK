@@ -5,8 +5,8 @@ import os
 import sys
 import subprocess
 
-just_fastas = sys.argv[1]
-summary = sys.argv[2]
+just_fastas = sys.argv[1] # folder whose contents you want to rename
+summary = sys.argv[2] # location of assembly_summary.txt
 df = pd.read_csv(summary, delimiter='\t', index_col=0)
 
 df.update(df['infraspecific_name'][(df['infraspecific_name'].isnull()) & (df['isolate'].isnull())].fillna('NA'))
@@ -27,7 +27,7 @@ for f in os.listdir(just_fastas):
             org_name = df.get_value(id, 'organism_name')
             strain = df.get_value(id, 'infraspecific_name').strip('strain=')
             assembly_level  = df.get_value(id, 'assembly_level')
-            newname = '{}_{}{}_{}.fna.gz'.format(id, org_name, strain, assembly_level)
+            newname = '{}_{}{}_{}.fna'.format(id, org_name, strain, assembly_level)
             old = just_fastas+f
             new = just_fastas+newname
             os.rename(old, new)

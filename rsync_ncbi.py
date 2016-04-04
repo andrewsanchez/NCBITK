@@ -9,14 +9,15 @@ organism = sys.argv[1]
 local_mirror = sys.argv[2]
 summary = sys.argv[3]
 
-ftp_directory = 'bacteria/' + organism + '/latest_assembly_versions/'
+ftp_directory = 'bacteria/' + organism
 just_fastas = local_mirror + '_fastas/'
 
 if os.path.isdir(local_mirror):
     subprocess.run(['rsync',
                     '-iPrLtm',
+                    '-f=+ /latest_assembly_versions'
                     '--exclude=**/unplaced_scaffolds/**',
-                    '-f=+ GCA*.fna.gz',
+                    '-f=+ *.fna.gz',
                     '-f=+ */',
                     '--exclude=*',
                     'ftp.ncbi.nlm.nih.gov::genomes/genbank/' + ftp_directory,
@@ -37,7 +38,7 @@ else:
 
 # copy just fastas from local NCBI mirror to just_fastas directory
 if os.path.isdir(just_fastas):
-    subprocess.run(['sudo', 'find', organism, '-type', 'f',
+    subprocess.run(['sudo', 'find', local_mirror, '-type', 'f',
                     '-exec', 'cp',
                     '-t', just_fastas,
                     '-- {}', '+'])
