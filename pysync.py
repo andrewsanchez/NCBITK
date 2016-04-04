@@ -1,7 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import os
-import sys
+import os, sys, stat
 import subprocess
 import pandas as pd
 from ftplib import FTP
@@ -32,39 +31,46 @@ if not os.path.isdir(all_fastas):
     os.mkdir(all_fastas)
 
 dirs = ftp.nlst()
-for organism in dirs: # sync with any number of folders with dirs[n:n2]
-    print(str(dirs.index(organism))+ ' out of ' + str(len(dirs)))
+for organism in dirs[0:3]: # sync with any number of folders with dirs[n:n2]
+    #print(str(dirs.index(organism))+ ' out of ' + str(len(dirs)))
 
     single_organism = all_fastas + organism + '/'
-    subprocess.run(['rsync',
-                    '-iPrLt',
+    subprocess.call(['rsync',
+                    '-iPrLtm',
                     '-f=+ GCA*fna.gz',
                     '--exclude=/unplaced_scaffolds/**',
                     '-f=+ */',
                     '--exclude=*',
                     'ftp.ncbi.nlm.nih.gov::genomes/genbank/bacteria/' + organism + '/latest_assembly_versions/',
-                    '--log-file=log.txt',
+                    '--log-file='+local_mirror+'log.txt',
                     local_mirror + organism])
+
+    for root, dirs, files in os.walk(local_mirror+organism):
+        for dir in [os.path.join(root, d) for d in dirs]:
+            os.chmod(dir, stat.S_IRWXU)
+        for file in [os.path.join(root, f) for f in files]:
+            os.chmod(file, stat.S_IRWXU)
+
     if os.path.isdir(single_organism):
         organism = local_mirror + organism
-        subprocess.run(['sudo', 'find', organism, '-type', 'f',
+        subprocess.call(['find', organism, '-type', 'f',
                         '-exec', 'cp',
                         '-t', single_organism,
                         '-- {}', '+'])
 
-        subprocess.run(['sudo', 'find', single_organism, '-name', '*.gz',
+        subprocess.call(['find', single_organism, '-name', '*.gz',
                         '-exec', 'pigz',
                         '-d',
                         '-- {}', '+'])
     else:
         os.mkdir(single_organism)
         organism = local_mirror + organism
-        subprocess.run(['find', organism, '-type', 'f',
+        subprocess.call(['find', organism, '-type', 'f',
                     '-exec', 'cp',
                     '-t', single_organism,
                     '-- {}', '+'])
 
-        subprocess.run(['sudo', 'find', single_organism, '-name', '*.gz',
+        subprocess.call(['find', single_organism, '-name', '*.gz',
                         '-exec', 'pigz',
                         '-d',
                         '-- {}', '+'])
