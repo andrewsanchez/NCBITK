@@ -33,7 +33,7 @@ print('Misnamed files:  {}'.format(len(misnamed)))
 
 missing = []
 for f in misnamed:
-    id = f.split('/')[3]
+    id = f.split('/')[3] # handle index out of range error
     id = (id.split('_')[0:2])
     id = ('_'.join(id))
     if id in df.index:
