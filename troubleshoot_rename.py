@@ -30,19 +30,27 @@ for root, dirs, files in os.walk(fastas):
 print('Total number of files:  {}'.format(len(total_fastas)))
 print('Correctly named files:  {}'.format(len(correctly_named)))
 print('Misnamed files:  {}'.format(len(misnamed)))
+print('\n')
 
 missing = []
 for f in misnamed:
-    id = f.split('/')[3] # handle index out of range error
+   #try:
+    id = f.split('/')[2]
     id = (id.split('_')[0:2])
     id = ('_'.join(id))
+    print(id)
     if id in df.index:
         with open(f, 'r') as fasta:
             line = fasta.readline()
             print(f)
             print(line)
-            print('\n')
-        print(df.loc[id][6:11])
+        #print(df.index[id])
+        print(df.loc[id][6])
+        print('\n')
     else:
         missing.append(f)
-        print(str(len(missing)) +  ' IDs missing from assembly.txt')
+print(str(len(missing)) + ' files missing from assembly_summary.txt')
+    #except:
+        #indexError.append(f)
+	#print(str(len(indexError)) + ' IDs with Index Error')
+#print(str(len(missing)) +  ' IDs missing from assembly.txt')
