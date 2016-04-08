@@ -32,8 +32,6 @@ if not os.path.isdir(all_fastas):
 
 dirs = ftp.nlst()
 for organism in dirs: # sync with any number of folders with dirs[n:n2]
-    #print(str(dirs.index(organism))+ ' out of ' + str(len(dirs)))
-
     single_organism = all_fastas + organism + '/'
     subprocess.call(['rsync',
                     '-iPrLtm',
@@ -51,7 +49,7 @@ for organism in dirs: # sync with any number of folders with dirs[n:n2]
         for file in [os.path.join(root, f) for f in files]:
             os.chmod(file, stat.S_IRWXU)
 
-    if os.path.isdir(single_organism):
+    if os.path.isdir(single_organism): # only copy over new files
         organism = local_mirror + organism
         subprocess.call(['find', organism, '-type', 'f',
                         '-exec', 'cp',
