@@ -1,5 +1,8 @@
 import os
 
+# count the number of dirs on ftp site
+# count the number of total files
+
 emptyDirs = []
 
 for root, dirs, files in os.walk('genbank_bacteria'):
