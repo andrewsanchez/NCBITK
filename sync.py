@@ -4,22 +4,24 @@ import os, sys, stat, subprocess
 import pandas as pd
 from ftplib import FTP
 
-# get current version of assembly_summary.txt
-#if os.path.isfile('assembly_summary.txt'):
-#   os.remove('assembly_summary.txt')
-#   subprocess.call(['wget',
-#                   'ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt'])
-#else:
-#   subprocess.call(['wget',
-#                   'ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt'])
+local_mirror = sys.argv[1] # make sure to include a trailing slash
+all_fastas = local_mirror.strip('/') + '_fastas/'
 
+# get current version of assembly_summary.txt
+if os.path.isfile('assembly_summary.txt'):
+   os.remove('assembly_summary.txt')
+   subprocess.call(['wget',
+                   'ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt'])
+else:
+   subprocess.call(['wget',
+                   'ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt'])
+
+# connect with ftp.ncbi and get list of directories
 ftp_site = 'ftp.ncbi.nlm.nih.gov'
 ftp = FTP(ftp_site)
 ftp.login()
 ftp.cwd('genomes/genbank/bacteria')
-
-local_mirror = sys.argv[1] # make sure to include a trailing slash
-all_fastas = local_mirror.strip('/') + '_fastas/'
+dirs = ftp.nlst()
 
 # remove duplicate strings during renaming
 def rmDuplicates(seq):
@@ -31,13 +33,12 @@ def rmDuplicates(seq):
 df = pd.read_csv('assembly_summary.txt', delimiter='\t', index_col=0)
 df.update(df['infraspecific_name'][(df['infraspecific_name'].isnull()) & (df['isolate'].isnull())].fillna('NA'))
 df.update(df['infraspecific_name'][(df['infraspecific_name'].isnull()) & (df['isolate'].notnull())].fillna(df['isolate']))
-#df.organism_name.replace({' = ': '_'}, regex=True, inplace=True)
-#df.infraspecific_name.replace({' = ': '_'}, regex=True, inplace=True)
-df.organism_name.replace({' ': '_'}, regex=True, inplace=True)
-df.organism_name.replace({'[\W]': ''}, regex=True, inplace=True)
-df.infraspecific_name.replace({'[ =\-\;]': '_'}, regex=True, inplace=True)
-df.infraspecific_name.replace({'[\W]': ''}, regex=True, inplace=True)
 df.assembly_level.replace({' ': '_'}, regex=True, inplace=True)
+df.organism_name.replace({' = ': '_'}, regex=True, inplace=True)
+df.organism_name.replace({' ': '_'}, regex=True, inplace=True)
+df.organism_name.replace({'[\W]': '_'}, regex=True, inplace=True)
+df.infraspecific_name.replace({' = ': '_'}, regex=True, inplace=True)
+df.infraspecific_name.replace({'[\W]': '_'}, regex=True, inplace=True)
 
 # make directories if necessary
 if not os.path.isdir(local_mirror):
@@ -46,8 +47,7 @@ if not os.path.isdir(local_mirror):
 if not os.path.isdir(all_fastas):
     os.mkdir(all_fastas)
 
-dirs = ftp.nlst()
-for organism in dirs[0:2]: # sync with any number of folders with dirs[m:n]
+for organism in dirs: # sync with any number of folders with dirs[m:n]
     single_organism = all_fastas + organism + '/'
     subprocess.call(['rsync',
                     '--ignore-existing',
@@ -72,43 +72,38 @@ for organism in dirs[0:2]: # sync with any number of folders with dirs[m:n]
         organism = local_mirror + organism
         subprocess.call(['find', organism, '-type', 'f',
                         '-exec', 'cp',
-                        '-nt', single_organism,
+                        '-t', single_organism,
                         '-- {}', '+'])
 
         # decompress files
         subprocess.call(['find', single_organism, '-name', '*.gz',
-                        '-exec', 'pigz', '-dfk', '-- {}', '+'])
+                        '-exec', 'pigz', '-k', '-fd', '-- {}', '+'])
     else:
         os.mkdir(single_organism)
         organism = local_mirror + organism
         subprocess.call(['find', organism, '-type', 'f',
-                    '-exec', 'cp',
-                    '-nt', single_organism,
-                    '-- {}', '+'])
+                        '-exec', 'cp',
+                        '-t', single_organism,
+                        '-- {}', '+'])
 
         subprocess.call(['find', single_organism, '-name', '*.gz',
-                        '-exec', 'pigz', '-dfk', '-- {}', '+'])
+                        '-exec', 'pigz', '-k', '-fd', '-- {}', '+'])
 
     for f in os.listdir(single_organism):
         id = (f.split('_')[0:2])
         id = ('_'.join(id))
-        print(f)
 
         if id in df.index:
             org_name = df.get_value(id, 'organism_name')
             strain = df.get_value(id, 'infraspecific_name')
             assembly_level  = df.get_value(id, 'assembly_level')
             newname = '{}_{}{}_{}.fna'.format(id, org_name, strain, assembly_level)
-            newname = f.split('_')
+            newname = newname.split('_')
             newname = rmDuplicates(newname)
-            print('after rmDuplicates:  ' + newname)
             newname = '_'.join(newname)
             newname = newname.replace('subsp_', '')
             newname = newname.replace('str_', '')
             newname = newname.replace('strain_', '')
-            print(newname)
             old = single_organism+f
-            print(old)
-            print(new)
             new = single_organism+newname
             os.rename(old, new)
