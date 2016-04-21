@@ -101,9 +101,11 @@ for organism in dirs: # sync with any number of folders with dirs[m:n]
             newname = newname.split('_')
             newname = rmDuplicates(newname)
             newname = '_'.join(newname)
-            newname = newname.replace('subsp_', '')
-            newname = newname.replace('str_', '')
-            newname = newname.replace('strain_', '')
+            newname = newname.replace('sub', '')
+            newname = newname.replace('sp', '')
+            newname = newname.replace('str', '')
+            newname = newname.replace('strain', '')
+            newname = newname.replace('__', '_')
             old = single_organism+f
             new = single_organism+newname
             os.rename(old, new)
