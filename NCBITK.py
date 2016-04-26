@@ -92,7 +92,10 @@ def get_fastas(local_mirror, organism_list):
         print('Create the file "organism_list.txt" in the current working directory')
 
 def Main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description = 'Sync with NCBI database.')
+   #group = parser.add_mutually_exclusive_group()
+   #group.add_argument('--input_file')
+   #group.add_argument('--from_list')
     parser.add_argument('local_mirror', help = 'Your local directory to save fastas to, e.g. "bacteria"', type=str)
     parser.add_argument('-G', '--no_wget', help = "Don't fetch assembly_summary.txt", action='store_true')
     parser.add_argument('-i', '--input_file', help = 'Input file containing directories to sync with.  ' \
@@ -105,7 +108,7 @@ def Main():
     if args.no_wget:
         check_dirs(args.local_mirror)
         get_fastas(args.local_mirror, args.input_file)
-    if args.from_list:
+    #if args.from_list:
     else:
         get_assembly_summary()
         check_dirs(args.local_mirror)

@@ -67,3 +67,4 @@ for organism in dirs[0:3]: # sync with any number of folders with dirs[m:n]
                         '-exec', 'pigz', '-k', '-fd', '-- {}', '+'])
 
     rename.rename(single_organism)
+
