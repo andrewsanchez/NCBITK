@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-import os, subprocess, argparse, rename
-import pandas as pd
+import os, subprocess, argparse, rename_fastas, gzip
 from ftplib import FTP
+from shutil import copyfile
 
 # get current version of assembly_summary.txt
 def get_assembly_summary(no_wget):
@@ -12,22 +12,23 @@ def get_assembly_summary(no_wget):
     else:
         try:
             os.remove('assembly_summary.txt')
+            subprocess.call(['wget', assembly_summary])
         except OSError:
             subprocess.call(['wget', assembly_summary])
 
 # connect with ftp.ncbi and get list of directories
-def get_organism_list(source):
-    if source:
-        if 'txt' in source:
+def get_organism_list(input_file):
+    if input_file:
+        if 'txt' in input_file:
             dirs = [] 
-            with open(source, 'r') as f:
+            with open(input_file, 'r') as f:
                 for line in f:
                     line = line.strip()
                     dirs.append(line)
             return dirs
 
         else:
-            dirs = source.split(',')
+            dirs = input_file.split(',')
             return dirs
 
     else:
@@ -48,10 +49,40 @@ def check_dirs(local_mirror):
     if not os.path.isdir(all_fastas):
         os.mkdir(all_fastas)
 
+def cp_files(source, destination):
+
+    destination_files = []
+
+    for root, dirs, files in os.walk(destination):
+        for f in files:
+            destination_files.append(f)
+
+    for root, dirs, files in os.walk(source):
+        for f in files:
+            f_unzipped = f.strip('.gz')
+            if f_unzipped not in destination_files:
+                source = os.path.join(root, f)
+               #destination = os.path.join(destination, f)
+                copyfile(source, os.path.join(destination, f))
+    
+def gunzip(target_dir):
+    for root, dirs, files in os.walk(target_dir):
+        for f in files:
+            if 'gz' in f:
+                f = os.path.join(root, f)
+                destination = f.strip('.fna.gz') + '.fna'
+                zipped = gzip.open(f)
+                unzipped = open(destination, 'wb')
+                decoded = zipped.read()
+                unzipped.write(decoded)
+                zipped.close()
+                unzipped.close()
+                os.remove(f)
+
 def get_fastas(local_mirror, organism_list):
     all_fastas = local_mirror.strip('/') + '_fastas/'
     dirs = get_organism_list(organism_list)
-    for organism in dirs: # sync with any number of folders with dirs[m:n]
+    for organism in dirs:
         single_organism = all_fastas + organism + '/'
         subprocess.call(['rsync',
                         '--ignore-existing',
@@ -68,36 +99,26 @@ def get_fastas(local_mirror, organism_list):
         # copy files to different directory
         if os.path.isdir(single_organism):
             organism = local_mirror + '/' + organism
-            subprocess.call(['find', organism, '-type', 'f',
-                            '-exec', 'cp',
-                            '-t', single_organism,
-                            '-- {}', '+'])
+            cp_files(organism, single_organism)
+            gunzip(single_organism)
 
-            # decompress files
-            subprocess.call(['find', single_organism, '-name', '*.gz',
-                            '-exec', 'pigz', '-k', '-fd', '-- {}', '+'])
         else:
             os.mkdir(single_organism)
             organism = local_mirror + '/' + organism
-            subprocess.call(['find', organism, '-type', 'f',
-                            '-exec', 'cp',
-                            '-t', single_organism,
-                            '-- {}', '+'])
+            cp_files(organism, single_organism)
+            gunzip(single_organism)
 
-            subprocess.call(['find', single_organism, '-name', '*.gz',
-                            '-exec', 'pigz', '-k', '-fd', '-- {}', '+'])
-
-        rename.rename(single_organism)
+        rename_fastas.rename(single_organism)
 
 def Main():
     parser = argparse.ArgumentParser(description = "Sync with NCBI's database, give the files useful names,"\
             "and organize them in a sane way.")
    #group = parser.add_mutually_exclusive_group()
-   #group.add_argument('--input_file')
-   #group.add_argument('--from_list')
+   #group.add_argument('--from_file')
+   #group.add_argument('--list')
     parser.add_argument('local_mirror', help = 'Your local directory to save fastas to, e.g. "bacteria"', type=str)
     parser.add_argument('-W', '--no_wget', help = "Don't fetch assembly_summary.txt", action='store_true')
-    parser.add_argument('-i', '--input_file', help = 'Input file containing directories to sync with.')
+    parser.add_argument('-i', '--from_file', help = 'Input file containing directories to sync with.')
     parser.add_argument('-l', '--from_list', help = 'Comma separated list of directories to be downloaded')
     args = parser.parse_args()
 
@@ -106,15 +127,14 @@ def Main():
         check_dirs(args.local_mirror)
         get_fastas(args.local_mirror, args.from_list)
             
-    elif args.input_file:
+    elif args.from_file:
         get_assembly_summary(args.no_wget)
         check_dirs(args.local_mirror)
-        get_fastas(args.local_mirror, args.input_file)
+        get_fastas(args.local_mirror, args.from_file)
 
     else:
         get_assembly_summary(args.no_wget)
         check_dirs(args.local_mirror)
-        get_fastas(args.local_mirror, args.input_file)
+        get_fastas(args.local_mirror, args.from_file)
 
-if __name__ == '__main__':
-    Main()
+Main()
