@@ -70,7 +70,9 @@ def gunzip(target_dir):
         for f in files:
             if 'gz' in f:
                 f = os.path.join(root, f)
-                destination = f.strip('.fna.gz') + '.fna'
+                print(f)
+                destination = f.strip('.gz')
+                print(destination)
                 zipped = gzip.open(f)
                 unzipped = open(destination, 'wb')
                 decoded = zipped.read()
