@@ -3,7 +3,7 @@
 from ftplib import FTP
 import os
 
-def comparedirs(organisms, local):
+def compare_dirs(organisms, local):
     ftp_site = 'ftp.ncbi.nlm.nih.gov'
     ftp = FTP(ftp_site)
     ftp.login()
@@ -18,4 +18,4 @@ def comparedirs(organisms, local):
 
 if __name__ == "__main__":
     import sys
-    comparedirs(sys.argv[1], sys.argv[2])
+    compare_dirs(sys.argv[1], sys.argv[2])
