@@ -114,6 +114,29 @@ def get_fastas(local_mirror, organism_list):
 
         rename_fastas.rename(single_organism)
 
+def monitor_changes(local_mirror):
+    import time
+    all_fastas = local_mirror.strip('/') + '_fastas/'
+    ftp_site = 'ftp.ncbi.nlm.nih.gov'
+    ftp = FTP(ftp_site)
+    ftp.login()
+    ftp.cwd('genomes/genbank/bacteria')
+    dirs = ftp.nlst()
+    countdirs = str(len(dirs))
+    localdirs = str(len(os.listdir(all_fastas)))
+    missingdirs = int(countdirs) - int(localdirs)
+    with open(local_miror/+"changes.log", "a") as log:
+        log.write(time.strftime("%m/%d/%y"))
+        log.write('Dirs at ftp.ncbi:  ' + countdirs)
+        log.write('Dirs in {}:  {}'.format(local, localdirs))
+        log.write('Missing dirs = ' + str(missingdirs))
+
+        for i in dirs:
+            if i not in os.listdir(local):
+                log.write(i)
+
+        log.write("\n")
+
 def Main():
     parser = argparse.ArgumentParser(description = "Sync with NCBI's database, give the files useful names,"\
             "and organize them in a sane way.")
@@ -130,15 +153,18 @@ def Main():
         get_assembly_summary(args.no_wget)
         check_dirs(args.local_mirror)
         get_fastas(args.local_mirror, args.from_list)
+        monitor_changes(args.local_mirror)
             
     elif args.from_file:
         get_assembly_summary(args.no_wget)
         check_dirs(args.local_mirror)
         get_fastas(args.local_mirror, args.from_file)
+        monitor_changes(args.local_mirror)
 
     else:
         get_assembly_summary(args.no_wget)
         check_dirs(args.local_mirror)
         get_fastas(args.local_mirror, args.from_file)
+        monitor_changes(args.local_mirror)
 
 Main()
