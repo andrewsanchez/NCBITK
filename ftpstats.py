@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
+import os, argparse
 from ftplib import FTP
-import os
 
 def compare_dirs(organisms, local):
     ftp_site = 'ftp.ncbi.nlm.nih.gov'
@@ -16,6 +16,18 @@ def compare_dirs(organisms, local):
     print('Dirs in {}:  {}'.format(local, localdirs))
     print('Missing dirs = ' + str(missingdirs))
 
-if __name__ == "__main__":
-    import sys
-    compare_dirs(sys.argv[1], sys.argv[2])
+    for i in dirs:
+        if i not in os.listdir(local):
+            print(i)
+
+def Main():
+    parser = argparse.ArgumentParser(
+    description = "Compare the number of directories at ftp.ncbi.nlm.nih.gov/genomes/genbank/[organism]"\
+            "with the number of directories in your local directory")
+    parser.add_argument("organism", help = "e.g., bacteria or fungi")
+    parser.add_argument("local_dir", help = "local directory you want to compare against NCBI's FTP site")
+    args = parser.parse_args()
+
+    compare_dirs(args.organism, args.local_dir)
+
+Main()
