@@ -10,7 +10,7 @@ def rmduplicates(seq):
 
 def rename(renametarget):
     # clean up assembly_summary.txt
-    df = pd.read_csv('assembly_summary.txt', delimiter='\t', index_col=0)
+    df = pd.read_csv('assembly_summary.txt', delimiter='\t', index_col=0, skiprows=1)
     df.update(df['infraspecific_name'][(df['infraspecific_name'].isnull()) & (df['isolate'].isnull())].fillna('NA'))
     df.update(df['infraspecific_name'][(df['infraspecific_name'].isnull()) & (df['isolate'].notnull())].fillna(df['isolate']))
     df.assembly_level.replace({' ': '_'}, regex=True, inplace=True)
