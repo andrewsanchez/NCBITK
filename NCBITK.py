@@ -16,6 +16,8 @@ def get_assembly_summary(no_wget):
         except OSError:
             subprocess.call(['wget', assembly_summary])
 
+#def clean_assembly_summary():
+
 # connect with ftp.ncbi and get list of directories
 def get_organism_list(input_file):
     if input_file:
