@@ -26,7 +26,7 @@ def rename(renametarget):
                 org_name = df.get_value(id, 'organism_name')
                 strain = df.get_value(id, 'infraspecific_name')
                 assembly_level  = df.get_value(id, 'assembly_level')
-                newname = '{}_{}_{}_{}.fna'.format(id, org_name, strain, assembly_level)
+                newname = '{}_{}_{}_{}.fasta'.format(id, org_name, strain, assembly_level)
                 rmwords = re.compile( r'((?<=_)(sp|sub|substr|subsp|str|strain)(?=_))' )
                 newname = rmwords.sub('_', newname)
                 newname = re.sub(r'_+', '_', newname )
