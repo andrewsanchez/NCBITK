@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, subprocess, argparse, rename_fastas, gzip
+import os, subprocess, argparse, rename_fastas, gzip, time
 from ftplib import FTP
 from shutil import copyfile
 
@@ -44,7 +44,7 @@ def get_organism_list(input_file):
 
 # make directories if necessary
 def check_dirs(local_mirror):
-    all_fastas = local_mirror.strip('/') + '_fastas/'
+    all_fastas = local_mirror+'_fastas/'
     if not os.path.isdir(local_mirror):
         os.mkdir(local_mirror)
 
@@ -84,13 +84,18 @@ def gunzip(target_dir):
                 os.remove(f)
 
 def get_fastas(local_mirror, organism_list):
-    all_fastas = local_mirror.strip('/') + '_fastas/'
+    changes_log = os.path.join(local_mirror, "changes_log.txt")
+    with open(changes_log, "a") as log:
+        log.write("start time:  " + time.strftime("%m/%d/%y - %H:%M"))
+        log.write("\n")
+
+    all_fastas = local_mirror+'_fastas/'
     dirs = get_organism_list(organism_list)
     for organism in dirs:
         single_organism = all_fastas + organism + '/'
         subprocess.call(['rsync',
                         '--ignore-existing',
-                        '--chmod=777',
+                        '--chmod=755',
                         '-irLtm',
                         '-f=+ GCA*fna.gz',
                         '--exclude=/unplaced_scaffolds/**',
@@ -115,27 +120,27 @@ def get_fastas(local_mirror, organism_list):
         rename_fastas.rename(single_organism)
 
 def monitor_changes(local_mirror):
-    import time
-    all_fastas = local_mirror.strip('/') + '_fastas/'
+    all_fastas = local_mirror+'_fastas/'
     ftp_site = 'ftp.ncbi.nlm.nih.gov'
     ftp = FTP(ftp_site)
     ftp.login()
     ftp.cwd('genomes/genbank/bacteria')
     dirs = ftp.nlst()
     countdirs = str(len(dirs))
-    localdirs = str(len(os.listdir(all_fastas)))
-    missingdirs = int(countdirs) - int(localdirs)
-    with open(local_miror/+"changes.log", "a") as log:
-        log.write(time.strftime("%m/%d/%y"))
-        log.write('Dirs at ftp.ncbi:  ' + countdirs)
-        log.write('Dirs in {}:  {}'.format(local, localdirs))
-        log.write('Missing dirs = ' + str(missingdirs))
-
-        for i in dirs:
-            if i not in os.listdir(local):
-                log.write(i)
-
+    local_dir_count = str(len(os.listdir(all_fastas)))
+    missingdirs = int(countdirs) - int(local_dir_count)
+    changes_log = os.path.join(local_mirror, "changes_log.txt")
+    with open(changes_log, "a") as log:
+        log.write("finish time:  " + time.strftime("%m/%d/%y - %H:%M"))
         log.write("\n")
+        log.write('Dirs at ftp.ncbi:  ' + countdirs)
+        log.write("\n")
+        log.write('Dirs in {}:  {}\n'.format(all_fastas, local_dir_count))
+        log.write('Missing dirs = ' + str(missingdirs))
+        log.write("\n")
+        for i in dirs:
+            if i not in os.listdir(local_mirror):
+                log.write(i+"\n")
 
 def Main():
     parser = argparse.ArgumentParser(description = "Sync with NCBI's database, give the files useful names,"\
