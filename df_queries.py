@@ -1,8 +1,19 @@
 #!/usr/bin/env python
 
 import pandas as pd
-from os import path
+from os import path, getcwd, mkdir
 import argparse
+
+# make dirs to hold reorganize fastas into passed/failed groups
+def mkdirs():
+    cwd = getcwd()
+    pass_dir = path.join(cwd, "pass")
+    fail_dir = path.join(cwd, "fail")
+
+    if not path.isdir(pass_dir): 
+        mkdir(pass_dir)
+    if not path.isdir(fail_dir):
+        mkdir(fail_dir)
 
 def read_csv(organism):
     df = pd.read_csv(path.join(organism, "stats.csv"))
@@ -23,7 +34,7 @@ def df_filters(df, fsize=5000000, contigs=500, N_count=500):
     df = df[ (df["File Size"] >= fsize) & (df["Contigs"] <= contigs) & (df["N_count"] <= N_count) ]
     return df
 
-df mash(reference):
+def mash(reference):
     # subprocess(path to mash executable)
     # make sketch, etc.
 
@@ -39,6 +50,7 @@ def Main():
     mean_dict = {i:description[i]["mean"] for i in description.columns}
     min_dict = {i:description[i]["min"] for i in description.columns}
     max_dict = {i:description[i]["max"] for i in description.columns}
+
 
     if args.describe:
         describe(df)
