@@ -2,6 +2,7 @@
 
 import pandas as pd
 from os import path, getcwd, mkdir
+from subprocess import call
 import argparse
 
 # make dirs to hold reorganize fastas into passed/failed groups
@@ -31,34 +32,37 @@ def contigs(df, contigs=200):
     return contigs
 
 def df_filters(df, fsize=5000000, contigs=500, N_count=500):
-    df = df[ (df["File Size"] >= fsize) & (df["Contigs"] <= contigs) & (df["N_count"] <= N_count) ]
+    df = df[ (df["File Size"] >= fsize) & (df["Contigs"] <= contigs) & (df["N Count"] <= N_count) ]
     return df
 
-def mash(reference):
+#def mash(reference):
     # subprocess(path to mash executable)
     # make sketch, etc.
+
+#def sort_files(df, organism):
+#   for f in df["Accession"]:
+#       source = join(organism, f)
+#       dest = join(organism, "pass", f)
+#       call.([ "ln", "-s", source, dest ])
+
 
 def Main():
     parser = argparse.ArgumentParser(description = "Functions to explore qc stats")
     parser.add_argument("organism", help="Path to the fasta dir you want to know about")
     parser.add_argument("-d", "--describe", help="Summary stats.csv", action='store_true')
+    parser.add_argument("-n", "--N_count", default=500, type=int)
+    parser.add_argument("-c", "--contigs", default=500, type=int)
+    parser.add_argument("-f", "--file_size", default=5000000, type=int)
     args = parser.parse_args()
 
-    df = read_csv(args.organism)
+    organism = args.organism
+    df = read_csv(organism)
     description = describe(df)
     std_dict = {i:description[i]["std"] for i in description.columns}
     mean_dict = {i:description[i]["mean"] for i in description.columns}
     min_dict = {i:description[i]["min"] for i in description.columns}
     max_dict = {i:description[i]["max"] for i in description.columns}
-
-
-    if args.describe:
-        describe(df)
-
-    elif args.N_count:
-        N_count(df)
-
-    else:
-        print("wtf")
+    df = df_filters(df, fsize=args.file_size, contigs=args.contigs, N_count=args.N_count)
+    print("Files matching this criteria:  {}".format(len(df)))
 
 Main()
