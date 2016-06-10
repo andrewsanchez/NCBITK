@@ -21,7 +21,9 @@ def read_csv(organism):
     return df
 
 def describe(df):
-    return df.describe()
+    print("Summary of unfiltered fastas:")
+    description = df.describe()
+    print(description)
 
 def N_count(df, N_count=200):
     N_count = df[df["N Count"] < N_count]
@@ -34,6 +36,19 @@ def contigs(df, contigs=200):
 def df_filters(df, fsize=5000000, contigs=500, N_count=500):
     df = df[ (df["File Size"] >= fsize) & (df["Contigs"] <= contigs) & (df["N Count"] <= N_count) ]
     return df
+
+def dialogue():
+    print("There are {} files matching the filter".format(len(df)))
+    print("Summary of the unfiltered data frame:")
+    print(description)
+    print("Please enter the max values for N, contigs, and file size.")
+    print("Press enter at each prompt to use default values:\n\
+    N_count=500\n\
+    contigs=500\n\
+    file_size=5000000\n")
+    N_count = int(input("  > Max N count:  "))
+    contigs = int(input("  > Max N count:  "))
+    File_size = int(input("  > Max N count:  "))
 
 #def mash(reference):
     # subprocess(path to mash executable)
@@ -57,11 +72,20 @@ def Main():
 
     organism = args.organism
     df = read_csv(organism)
+    describe(df)
     description = describe(df)
+
     std_dict = {i:description[i]["std"] for i in description.columns}
     mean_dict = {i:description[i]["mean"] for i in description.columns}
     min_dict = {i:description[i]["min"] for i in description.columns}
     max_dict = {i:description[i]["max"] for i in description.columns}
+
+    """
+
+    
+
+    """
+
     df = df_filters(df, fsize=args.file_size, contigs=args.contigs, N_count=args.N_count)
     print("Files matching this criteria:  {}".format(len(df)))
 
