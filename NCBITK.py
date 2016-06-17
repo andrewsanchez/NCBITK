@@ -94,8 +94,8 @@ def get_fastas(local_mirror, organism_list):
     for organism in dirs:
         single_organism = all_fastas + organism + '/'
         subprocess.call(['rsync',
-                        '--ignore-existing',
-                        '--chmod=755',
+                        '--chmod=ugo=rwX',
+                        '--info=progress2',
                         '-irLtm',
                         '-f=+ GCA*fna.gz',
                         '--exclude=/unplaced_scaffolds/**',

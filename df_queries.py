@@ -35,11 +35,21 @@ def contigs(df, contigs=200):
     return contigs
 
 def df_filters(df, fsize=5000000, contigs=500, N_count=500):
+    description = df.describe()
+    std_dict = {i:description[i]["std"] for i in description.columns}
+    mean_dict = {i:description[i]["mean"] for i in description.columns}
+    min_dict = {i:description[i]["min"] for i in description.columns}
+    max_dict = {i:description[i]["max"] for i in description.columns}
+
+    fsize=(int(mean_dict["File Size"]))-(int(std_dict["File Size"]*2))
+    contigs=200
+    N_count=200
+
     print("Enter the max values for number of N's, contigs, and file size.")
-    print("Press enter to use the default values file_size=5000000, contigs=500, N_count=500")
-    fsize = int(input("  > Max File size:  ") or "5000000")
-    contigs = int(input("  > Max contigs:  ") or "500")
-    N_count = int(input("  > Max N count:  ") or "500")
+    print("Press enter to use the default values file_size={}, contigs={}, N_count={}".format(fsize, contigs, N_count))
+    fsize = int(input("  > Max File size:  ") or fsize)
+    contigs = int(input("  > Max contigs:  ") or contigs)
+    N_count = int(input("  > Max N count:  ") or N_count)
     df = df[ (df["File Size"] >= fsize) & (df["Contigs"] <= contigs) & (df["N Count"] <= N_count) ]
     print("There are {} fastas passing the filter".format(len(df)))
     again = input("Try again with different values?\n  > y/n:  ")
