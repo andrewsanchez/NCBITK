@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import re
+import re, sys
 from ftplib import FTP
 
 ftp_site = 'ftp.ncbi.nlm.nih.gov'
@@ -44,3 +44,12 @@ def count_files():
                             file.write("\n")
         except:
             continue
+
+def main(argv):
+    if argv == "count_dirs":
+        count_dirs()
+    elif argv == "count_files":
+        count_files()
+
+if __name__ == "__main__":
+    main(sys.argv[1])
