@@ -84,26 +84,40 @@ def gunzip(target_dir):
                 os.remove(f)
 
 def get_fastas(local_mirror, organism_list):
+    ftp_site = 'ftp.ncbi.nlm.nih.gov'
+    ftp = FTP(ftp_site)
+    ftp.login()
+    ftp.cwd('genomes/genbank/bacteria')
+    dirs = ftp.nlst()
+
+    rsync_log = os.path.join(local_mirror, "rsync_log.txt")
     changes_log = os.path.join(local_mirror, "changes_log.txt")
+
     with open(changes_log, "a") as log:
         log.write("start time:  " + time.strftime("%m/%d/%y - %H:%M"))
         log.write("\n")
 
     all_fastas = local_mirror+'_fastas/'
-    dirs = get_organism_list(organism_list)
     for organism in dirs:
-        single_organism = all_fastas + organism + '/'
-        subprocess.call(['rsync',
-                        '--chmod=ugo=rwX',
-                        '--info=progress2',
-                        '-irLtm',
-                        '-f=+ GCA*fna.gz',
-                        '--exclude=/unplaced_scaffolds/**',
-                        '-f=+ */',
-                        '--exclude=*',
-                        'ftp.ncbi.nlm.nih.gov::genomes/genbank/bacteria/' + organism + '/latest_assembly_versions/',
-                        '--log-file='+local_mirror+'/log.txt',
-                        local_mirror + '/' + organism])
+        latest = os.path.join(organism, 'latest_assembly_versions')
+        for parent in ftp.nlst(latest):
+            accession = parent.split("/")[-1]
+            fasta = accession+"_genomic.fna.gz"
+            single_organism = os.path.join(all_fastas, organism)
+            organism_dir = os.path.join(local_mirror, organism)
+            subprocess.call(['rsync',
+                            '--chmod=ugo=rwX',
+                            '--copy-links',
+                            '--recursive',
+                            '--times',
+                            '--prune-empty-dirs',
+                            '-f=+ '+fasta,
+                            '-f=+ */',
+                            '-f=+ '+fasta,
+                            '--exclude=*',
+                            'ftp.ncbi.nlm.nih.gov::genomes/genbank/bacteria/'+parent,
+                            '--log-file='+rsync_log,
+                            organism_dir])
 
         # copy files to different directory
         if os.path.isdir(single_organism):
