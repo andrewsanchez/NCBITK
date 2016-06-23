@@ -99,6 +99,9 @@ def get_fastas(local_mirror, organism_list):
 
     all_fastas = local_mirror+'_fastas/'
     for organism in dirs:
+        ftp = FTP(ftp_site)
+        ftp.login()
+        ftp.cwd('genomes/genbank/bacteria')
         latest = os.path.join(organism, 'latest_assembly_versions')
         for parent in ftp.nlst(latest):
             accession = parent.split("/")[-1]
@@ -110,9 +113,9 @@ def get_fastas(local_mirror, organism_list):
                             '--copy-links',
                             '--recursive',
                             '--times',
+                            '--itemize-changes',
                             '--prune-empty-dirs',
-                            '-f=+ '+fasta,
-                            '-f=+ */',
+                            '-f=+ '+accession,
                             '-f=+ '+fasta,
                             '--exclude=*',
                             'ftp.ncbi.nlm.nih.gov::genomes/genbank/bacteria/'+parent,
@@ -121,13 +124,13 @@ def get_fastas(local_mirror, organism_list):
 
         # copy files to different directory
         if os.path.isdir(single_organism):
-            organism = local_mirror + '/' + organism
+            organism = os.path.join(local_mirror, organism)
             cp_files(organism, single_organism)
             gunzip(single_organism)
 
         else:
             os.mkdir(single_organism)
-            organism = local_mirror + '/' + organism
+            organism = os.path.join(local_mirror, organism)
             cp_files(organism, single_organism)
             gunzip(single_organism)
 
