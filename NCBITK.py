@@ -1,26 +1,24 @@
 #!/usr/bin/env python3
 
-import os, subprocess, argparse, rename_fastas, gzip, time
+import os, subprocess, argparse, rename_fastas, gzip, time, shutil
 from ftplib import FTP
-from shutil import copyfile
+from ftplib import error_temp
 
-# get current version of assembly_summary.txt
-def get_assembly_summary(no_wget):
+# Get current version of assembly_summary.txt
+def get_assembly_summary(wget):
     assembly_summary = 'ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt'
-    if no_wget:
-        pass
-    else:
+    if wget:
         try:
             os.remove('assembly_summary.txt')
             subprocess.call(['wget', assembly_summary])
         except OSError:
             subprocess.call(['wget', assembly_summary])
+    else:
+        pass
 
-#def clean_assembly_summary():
-
-# connect with ftp.ncbi and get list of directories
 def get_organism_list(input_file):
     if input_file:
+        # Read from file
         if 'txt' in input_file:
             dirs = [] 
             with open(input_file, 'r') as f:
@@ -28,23 +26,23 @@ def get_organism_list(input_file):
                     line = line.strip()
                     dirs.append(line)
             return dirs
-
+        # Read from list given as an arg to -l
         else:
             dirs = input_file.split(',')
             return dirs
 
+    # Connect with ftp.ncbi and get list of directories
     else:
         ftp_site = 'ftp.ncbi.nlm.nih.gov'
         ftp = FTP(ftp_site)
         ftp.login()
         ftp.cwd('genomes/genbank/bacteria')
         dirs = ftp.nlst()
-
         return dirs
 
-# make directories if necessary
+# Make directories if they don't already exist
 def check_dirs(local_mirror):
-    all_fastas = local_mirror+'_fastas/'
+    all_fastas =  local_mirror+'_renamed/'
     if not os.path.isdir(local_mirror):
         os.mkdir(local_mirror)
 
@@ -52,29 +50,24 @@ def check_dirs(local_mirror):
         os.mkdir(all_fastas)
 
 def cp_files(source, destination):
-
-    destination_files = []
-
-    for root, dirs, files in os.walk(destination):
-        for f in files:
-            destination_files.append(f)
-
+    # Copy new files to destination
     for root, dirs, files in os.walk(source):
         for f in files:
-            f_unzipped = f.strip('.gz')
-            if f_unzipped not in destination_files:
+            try:
                 source = os.path.join(root, f)
-               #destination = os.path.join(destination, f)
-                copyfile(source, os.path.join(destination, f))
-    
+                copy_to = os.path.join(destination, f)
+                shutil.copyfile(source, copy_to)
+            # Skip files that already exist in destination
+            except shutil.SameFileError:
+                continue
+
+# Unzip fastas
 def gunzip(target_dir):
     for root, dirs, files in os.walk(target_dir):
         for f in files:
-            if 'gz' in f:
+            if f.endswith(".gz"):
                 f = os.path.join(root, f)
-                print(f)
-                destination = f.strip('.gz')
-                print(destination)
+                destination = os.path.splitext(f)[0]
                 zipped = gzip.open(f)
                 unzipped = open(destination, 'wb')
                 decoded = zipped.read()
@@ -84,71 +77,67 @@ def gunzip(target_dir):
                 os.remove(f)
 
 def get_fastas(local_mirror, organism_list):
-    ftp_site = 'ftp.ncbi.nlm.nih.gov'
-    ftp = FTP(ftp_site)
-    ftp.login()
-    ftp.cwd('genomes/genbank/bacteria')
-    dirs = ftp.nlst()
-
+    dirs = get_organism_list(organism_list)
     rsync_log = os.path.join(local_mirror, "rsync_log.txt")
     changes_log = os.path.join(local_mirror, "changes_log.txt")
+    renamed = local_mirror+'_renamed'
 
     with open(changes_log, "a") as log:
         log.write("start time:  " + time.strftime("%m/%d/%y - %H:%M"))
         log.write("\n")
 
-    all_fastas = local_mirror+'_fastas/'
     for organism in dirs:
+        ftp_site = 'ftp.ncbi.nlm.nih.gov'
         ftp = FTP(ftp_site)
-        ftp.login()
-        ftp.cwd('genomes/genbank/bacteria')
+        ftp.login() # Reestablish ftp connection for each organism
+        ftp.cwd('genomes/genbank/bacteria') # Connection may timeout otherwise
         latest = os.path.join(organism, 'latest_assembly_versions')
-        for parent in ftp.nlst(latest):
-            accession = parent.split("/")[-1]
-            fasta = accession+"_genomic.fna.gz"
-            single_organism = os.path.join(all_fastas, organism)
-            organism_dir = os.path.join(local_mirror, organism)
-            subprocess.call(['rsync',
-                            '--chmod=ugo=rwX',
-                            '--copy-links',
-                            '--recursive',
-                            '--times',
-                            '--itemize-changes',
-                            '--prune-empty-dirs',
-                            '-f=+ '+accession,
-                            '-f=+ '+fasta,
-                            '--exclude=*',
-                            'ftp.ncbi.nlm.nih.gov::genomes/genbank/bacteria/'+parent,
-                            '--log-file='+rsync_log,
-                            organism_dir])
+        path_to_renamed = os.path.join(renamed, organism)
+        try:
+            for parent in ftp.nlst(latest):
+                accession = parent.split("/")[-1]
+                fasta = accession+"_genomic.fna.gz" # The file to be downloaded
+                organism_dir = os.path.join(local_mirror, organism)
+                subprocess.call(['rsync',
+                                '--chmod=ugo=rwX', # Change permissions so files can be copied/renamed
+                                '--info=progress2',
+                                '--copy-links', # Follow symbolic links
+                                '--recursive',
+                                '--times',
+                                '--itemize-changes',
+                                '--prune-empty-dirs',
+                                '-f=+ '+accession,
+                                '-f=+ '+fasta,
+                                '--exclude=*',
+                                'ftp.ncbi.nlm.nih.gov::genomes/genbank/bacteria/'+parent,
+                                organism_dir])
+        # Skips organisms that don't have the /latest_assembly_versions/ directory
+        except error_temp:
+            continue
 
-        # copy files to different directory
-        if os.path.isdir(single_organism):
-            organism = os.path.join(local_mirror, organism)
-            cp_files(organism, single_organism)
-            gunzip(single_organism)
+        # Copy files to different directory for renaming/decompression
+        if os.path.isdir(path_to_renamed):
+            source = os.path.join(local_mirror, organism)
+            cp_files(source, path_to_renamed)
+            gunzip(path_to_renamed)
 
         else:
-            os.mkdir(single_organism)
-            organism = os.path.join(local_mirror, organism)
-            cp_files(organism, single_organism)
-            gunzip(single_organism)
+            os.mkdir(path_to_renamed)
+            source = os.path.join(local_mirror, organism)
+            cp_files(source, path_to_renamed)
+            gunzip(path_to_renamed)
 
-        rename_fastas.rename(single_organism)
+        rename_fastas.rename(path_to_renamed)
 
-def monitor_changes(local_mirror):
-    all_fastas = local_mirror+'_fastas/'
-    ftp_site = 'ftp.ncbi.nlm.nih.gov'
-    ftp = FTP(ftp_site)
-    ftp.login()
-    ftp.cwd('genomes/genbank/bacteria')
-    dirs = ftp.nlst()
+def monitor_changes(local_mirror, organism_list):
+    all_fastas = local_mirror + "_renamed"
+    dirs = get_organism_list(organism_list)
     countdirs = str(len(dirs))
     local_dir_count = str(len(os.listdir(all_fastas)))
     missingdirs = int(countdirs) - int(local_dir_count)
     changes_log = os.path.join(local_mirror, "changes_log.txt")
     with open(changes_log, "a") as log:
-        log.write("finish time:  " + time.strftime("%m/%d/%y - %H:%M"))
+        log.write("Finish time:  " + time.strftime("%m/%d/%y - %H:%M"))
         log.write("\n")
         log.write('Dirs at ftp.ncbi:  ' + countdirs)
         log.write("\n")
@@ -162,31 +151,28 @@ def monitor_changes(local_mirror):
 def Main():
     parser = argparse.ArgumentParser(description = "Sync with NCBI's database, give the files useful names,"\
             "and organize them in a sane way.")
-   #group = parser.add_mutually_exclusive_group()
-   #group.add_argument('--from_file')
-   #group.add_argument('--list')
-    parser.add_argument('local_mirror', help = 'Your local directory to save fastas to, e.g. "bacteria"', type=str)
-    parser.add_argument('-W', '--no_wget', help = "Don't fetch assembly_summary.txt", action='store_true')
+    parser.add_argument('local_mirror', help = 'directory to save fastas to', type=str)
+    parser.add_argument('-w', '--wget', help = "Fetch assembly_summary.txt", action='store_true', default=False)
     parser.add_argument('-i', '--from_file', help = 'Input file containing directories to sync with.')
     parser.add_argument('-l', '--from_list', help = 'Comma separated list of directories to be downloaded')
     args = parser.parse_args()
 
     if args.from_list:
-        get_assembly_summary(args.no_wget)
+        get_assembly_summary(args.wget)
         check_dirs(args.local_mirror)
         get_fastas(args.local_mirror, args.from_list)
-        monitor_changes(args.local_mirror)
+        monitor_changes(args.local_mirror, args.from_list)
             
     elif args.from_file:
-        get_assembly_summary(args.no_wget)
+        get_assembly_summary(args.wget)
         check_dirs(args.local_mirror)
         get_fastas(args.local_mirror, args.from_file)
-        monitor_changes(args.local_mirror)
+        monitor_changes(args.local_mirror, args.from_file)
 
     else:
-        get_assembly_summary(args.no_wget)
+        get_assembly_summary(args.wget)
         check_dirs(args.local_mirror)
         get_fastas(args.local_mirror, args.from_file)
-        monitor_changes(args.local_mirror)
+        monitor_changes(args.local_mirror, args.from_file)
 
 Main()

@@ -2,6 +2,7 @@
 
 import re, sys, os, subprocess
 from ftplib import FTP
+from ftplib import error_temp
 
 #exclude = re.compile("(.*(from|rna|cds|protein).*)|(.*txt)|()")
 def count_dirs():
@@ -15,6 +16,7 @@ def count_dirs():
         try:
             dir_count += len(ftp.nlst(organism+"/latest_assembly_versions"))
             with open("dir_count.txt", "a") as file:
+                file.write(organism)
                 file.write(dir_count)
                 file.write("\n")
         except:
@@ -50,34 +52,36 @@ def get_fastas(local_mirror):
     ftp.login()
     ftp.cwd('genomes/genbank/bacteria')
     dirs = ftp.nlst()
-
     rsync_log = os.path.join(local_mirror, "rsync_log.txt")
+
     for organism in dirs:
         ftp = FTP(ftp_site)
         ftp.login()
         ftp.cwd('genomes/genbank/bacteria')
         latest = os.path.join(organism, 'latest_assembly_versions')
-        for parent in ftp.nlst(latest):
-            accession = parent.split("/")[-1]
-            fasta = accession+"_genomic.fna.gz"
-            organism_dir = os.path.join(local_mirror, organism)
-            subprocess.call(['rsync',
-                            '--dry-run',
-                            '--chmod=ugo=rwX',
-                            '--copy-links',
-                            '--recursive',
-                            '--times',
-                            '--prune-empty-dirs',
-                            '-f=+ '+fasta,
-                            '-f=+ */',
-                            '--exclude=*',
-                            'ftp.ncbi.nlm.nih.gov::genomes/genbank/bacteria/'+parent,
-                            '--log-file='+rsync_log,
-                            #'--itemize-changes',
-                           #'-f=+ '+organism+'/',
-                           #'-f=+ '+organism+'/'+'latest_assembly_versions/',
-                           #'-f=+ '+organism+'/'+'latest_assembly_versions/'+accession+'/',
-                            organism_dir])
+
+        try:
+            for parent in ftp.nlst(latest):
+                accession = parent.split("/")[-1]
+                fasta = accession+"_genomic.fna.gz"
+                organism_dir = os.path.join(local_mirror, organism)
+                subprocess.call(['rsync',
+                                '--dry-run',
+                                '--info=skip',
+                                '--chmod=ugo=rwX',
+                                '--copy-links',
+                                '--recursive',
+                                '--times',
+                                '--itemize-changes',
+                                '--prune-empty-dirs',
+                                '-f=+ '+accession,
+                                '-f=+ '+fasta,
+                                '--exclude=*',
+                                'ftp.ncbi.nlm.nih.gov::genomes/genbank/bacteria/'+parent,
+                                '--log-file='+rsync_log,
+                                organism_dir])
+        except error_temp:
+            print("no such file or directory {}".format(latest))
 
 def main(argv):
     if argv == "files":
@@ -85,7 +89,7 @@ def main(argv):
     if argv == "dirs":
         count_dirs()
     if argv == "rsync":
-        get_fastas('scratch/test_dir')
+        get_fastas('./')
 
 if __name__ == "__main__":
     main(sys.argv[1])
