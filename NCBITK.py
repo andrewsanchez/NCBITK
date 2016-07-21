@@ -42,38 +42,53 @@ def ftp_complete_species_list():
 
     return complete_species_list
 
-def get_dir_structure(local_miror):
+def mk_dir_structure(local_mirror):
 
-    renamed_dir = "{}_renamed".format(local_mirror)
-    complete_species_list = ftp_complete_species_list()
-    bacteria_and_their_accession_ids = {}
+    renamed_dir = "{}_renamed".format(local_mirror.strip("/"))
+    ftp = ftp_login()
+    complete_species_list = ftp.nlst()
 
     for species in complete_species_list:
-        species_dir = os.path.join(local_mirror, renamed_dir, species)
+        species_index = complete_species_list.index(species)+1
+        print("Updating {} out of {} directories.\n".format(species_index, len(complete_species_list)))
+
+        species_dir = os.path.join(renamed_dir, species)
         latest = os.path.join(species, "latest_assembly_versions")
 
-        if not os.path.isdir:
-            os.mkdir(species_dir)
-
         try:
-            accession_ids_in_latest_assembly_versions = ftpnlst(latest)
+            accession_ids_in_latest_assembly_versions = ftp.nlst(latest)
+            # Included in try block to avoid creating empty dirs
+            if not os.path.isdir(species_dir):
+                os.mkdir(species_dir)
+                print("Creating {}.\n".format(species_dir))
 
             for accession in accession_ids_in_latest_assembly_versions:
+                accession_id = accession.split("/")[-1]
+                print(accession_id)
                 try:
-                    source_fasta = os.path.join(local_mirror, accession, "{}_genomic.fna.gz".format(accession))
-                    destination = os.path.join(local_mirror, renamed_dir, species_dir)
-                    shutil.copyfile(source, destination)
+                    source_fasta = os.path.join(local_mirror, accession_id, "{}_genomic.fna.gz".format(accession_id))
+                    destination = os.path.join(species_dir, "{}_genomic.fna.gz".format(accession_id))
+                    shutil.copyfile(source_fasta, destination)
+                    print("Copied {} to {}\n.".format(source_fasta, destination))
                 except shutil.SameFileError: # Skip files that already exist in destination
                     continue
-                
-
-
-            bacteria_and_their_accession_ids[species] = accession_ids_in_latest_assembly_versions
-
         except BrokenPipeError: # just in case our ftp connection times out
             ftp = ftp_login()
-            accession_ids_in_latest_assembly_versions = ftpnlst(latest)
-            bacteria_and_their_accession_ids[species] = accession_ids_in_latest_assembly_versions
+            accession_ids_in_latest_assembly_versions = ftp.nlst(latest)
+
+            if not os.path.isdir(species_dir):
+                os.mkdir(species_dir)
+                print("Creating {}.\n".format(species_dir))
+
+            for accession in accession_ids_in_latest_assembly_versions:
+                accession_id = accession.split("/")[-1]
+                try:
+                    source_fasta = os.path.join(local_mirror, accession_id, "{}_genomic.fna.gz".format(accession_id))
+                    destination = os.path.join(species_dir, "{}_genomic.fna.gz".format(accession_id))
+                    shutil.copyfile(source_fasta, destination)
+                    print("Copied {} to {}\n.".format(source_fasta, destination))
+                except shutil.SameFileError: # Skip files that already exist in destination
+                    continue
         except error_temp: # skip organisms with no latest_assembly_dir
             continue
 
@@ -137,7 +152,7 @@ def check_dirs(local_mirror):
     if not os.path.isdir(local_mirror):
         os.mkdir(local_mirror)
 
-    renamed_fastas_dir =  "{}_renamed".format(local_mirror)
+    renamed_fastas_dir =  "{}_renamed".format(local_mirror.strip("/"))
     if not os.path.isdir(renamed_fastas_dir):
         os.mkdir(renamed_fastas_dir)
 
@@ -189,7 +204,7 @@ def get_latest_fastas_from_assembly_summary(local_mirror, fasta_list):
 
 def get_latest_fastas_from_list(local_mirror, organism_list):
     
-    renamed_fasta_dir = "%s_renamed" % (local_mirror)
+    renamed_fasta_dir = "%s_renamed" % (local_mirror.strip("/"))
     ftp = ftp_login()
 
     for organism in organism_list:
@@ -256,7 +271,7 @@ def gunzip(target_dir):
 
 def move_and_unzip(local_mirror, organism):
 
-    renamed_fasta_dir = "_".join([local_mirror,"renamed"])
+    renamed_fasta_dir = "_".join([local_mirror.strip("/"),"renamed"])
     renamed_organism_dir = os.path.join(renamed_fasta_dir, organism)
 
     if os.path.isdir(renamed_organism_dir):
@@ -300,7 +315,7 @@ def new_and_removed_log(local_mirror):
         log.write("\n")
 
 def monitor_changes(local_mirror, organism_list):
-    renamed_fastas_dir = local_mirror + "_renamed"
+    renamed_fastas_dir = local_mirror.strip("/") + "_renamed"
     dirs = get_species_list(organism_list)
     countdirs = str(len(dirs))
     local_dir_count = str(len(os.listdir(renamed_fastas_dir)))
@@ -327,6 +342,7 @@ def Main():
             a directory at ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/ and be separated by spaces.  \
             Use -g to get an enetire genus without having to list every species.', nargs="+")
     parser.add_argument('-g', '--genus', help = 'Retrieve all species of a genus or a list of genera eg. "Clostridium"')
+    parser.add_argument('-r', "--reorganize", action="store_true")
     args = parser.parse_args()
 
     if args.from_file:
@@ -344,6 +360,9 @@ def Main():
         get_assembly_summary(args.no_wget, args.local_mirror)
         organism_list = get_species_list_from_genus(args.genus)
         get_latest_fastas_from_list(args.local_mirror, organism_list)
+    elif args.reorganize:
+        check_dirs(args.local_mirror)
+        mk_dir_structure(args.local_mirror)
     else:
         check_dirs(args.local_mirror)
         get_assembly_summary(args.no_wget, args.local_mirror)
