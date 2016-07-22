@@ -39,6 +39,8 @@ def ftp_complete_species_list():
     print("Estimated wait time:  1 minute.\n")
     ftp = ftp_login()
     complete_species_list = ftp.nlst()
+    with open(ftp_stats, "a") as stats:
+        stats.write("{} dirs at genbank/bacteria/.".format(len(complete_species_list)))
 
     return complete_species_list
 
@@ -46,8 +48,12 @@ def get_accessions_in_latest_dirs(complete_species_list, species_dict, ftp):
 
     for species in complete_species_list:
         latest = os.path.join(species, "latest_assembly_versions")
-        accessions_in_latest_dirs = [accession.split("/")[-1] for acccession in ftp.nlst(latest)]
-        species_dict[species] = accessions_in_latest_dirs
+        try:
+            accessions_in_latest_dirs = [accession.split("/")[-1] for acccession in ftp.nlst(latest)]
+            species_dict[species] = accessions_in_latest_dirs
+        except error_temp:
+            with open(ftp_stats, "a") as stats:
+                stats.write("No latest_assembly_versions dir:  {}".format(species))
 
 def get_dir_structure():
 
@@ -56,12 +62,10 @@ def get_dir_structure():
     species_and_ids = {}
 
     try:
-        get_accessions_in_latest_dirs(complete_species_list,species_and_ids,ftp)
+        get_accessions_in_latest_dirs(complete_species_list, species_and_ids, ftp)
     except BrokenPipeError:
         ftp = ftp_login()
-        get_accessions_in_latest_dirs(complete_species_list,species_and_ids,ftp)
-    except error_temp:
-        continue
+        get_accessions_in_latest_dirs(complete_species_list, species_and_ids, ftp)
 
     return species_and_ids
 
@@ -88,71 +92,75 @@ def mk_dir_structure(local_mirror):
 
     for species, accessions in species_and_accession_ids:
         species_dir = os.path.join(renamed_dir, species)
+        print("Updating {}\n".format(species_dir))
+
         if not os.path.isdir(species_dir):
+            print("Creating {}.\n".format(species_dir))
             os.mkdir(species_dir)
         for accession in accessions:
             if accession in assembly_summary_df.index:
                 source = os.path.join(local_mirror, accession, "{}_genomic.fna.gz".format(accession))
-                destination = os.path.join(species_dir, "{}..fasta".format(accession))
+                destination = os.path.join(species_dir, "{}.fasta".format(accession))
                 if not os.path.isfile(destination):
                     zipped = gzip.open(source)
                     unzipped = open(destination, "wb")
                     decoded = zipped.read()
                     unzipped.write(decoded)
+                    print("Successfully unzipped {}".format(destination)
                     zipped.close()
                     unzipped.close()
 
-    for species in complete_species_list:
-        species_index = complete_species_list.index(species)+1
-        print("Updating {} out of {} directories.\n".format(species_index, len(complete_species_list)))
+  # for species in complete_species_list:
+  #     species_index = complete_species_list.index(species)+1
+  #     print("Updating {} out of {} directories.\n".format(species_index, len(complete_species_list)))
 
-        species_dir = os.path.join(renamed_dir, species)
-        latest = os.path.join(species, "latest_assembly_versions")
+  #     species_dir = os.path.join(renamed_dir, species)
+  #     latest = os.path.join(species, "latest_assembly_versions")
 
-        try:
-            accessions_in_latest_dirs = ftp.nlst(latest)
-            # Included in try block to avoid creating empty dirs
-            if not os.path.isdir(species_dir):
-                os.mkdir(species_dir)
-                print("Creating {}.\n".format(species_dir))
+  #     try:
+  #         accessions_in_latest_dirs = ftp.nlst(latest)
+  #         # Included in try block to avoid creating empty dirs
+  #         if not os.path.isdir(species_dir):
+  #             os.mkdir(species_dir)
+  #             print("Creating {}.\n".format(species_dir))
 
-            for accession in accessions_in_latest_dirs:
-                accession_id = accession.split("/")[-1]
-                try:
-                    source_fasta = os.path.join(local_mirror, accession_id, "{}_genomic.fna.gz".format(accession_id))
-                    destination = os.path.join(species_dir, "{}_genomic.fna.gz".format(accession_id))
-                    shutil.copyfile(source_fasta, destination)
-                    print("Copied {} to {}\n.".format(source_fasta, destination))
-                except shutil.SameFileError: # Skip files that already exist in destination
-                    continue
-                except FileNotFoundError:
-                    missing_files = os.path.join(local_mirror, "missing_files.txt")
-                    with open(missing_files, "a") as f:
-                        f.write(accession)
+  #         for accession in accessions_in_latest_dirs:
+  #             accession_id = accession.split("/")[-1]
+  #             try:
+  #                 source_fasta = os.path.join(local_mirror, accession_id, "{}_genomic.fna.gz".format(accession_id))
+  #                 destination = os.path.join(species_dir, "{}_genomic.fna.gz".format(accession_id))
+  #                 shutil.copyfile(source_fasta, destination)
+  #                 print("Copied {} to {}\n.".format(source_fasta, destination))
+  #             except shutil.SameFileError: # Skip files that already exist in destination
+  #                 continue
+  #             except FileNotFoundError:
+  #                 missing_files = os.path.join(local_mirror, "missing_files.txt")
+  #                 with open(missing_files, "a") as f:
+  #                     f.write(accession)
 
-        except BrokenPipeError: # just in case our ftp connection times out
-            ftp = ftp_login()
-            accessions_in_latest_dirs = ftp.nlst(latest)
+  #     except BrokenPipeError: # just in case our ftp connection times out
+  #         ftp = ftp_login()
+  #         accessions_in_latest_dirs = ftp.nlst(latest)
 
-            if not os.path.isdir(species_dir):
-                os.mkdir(species_dir)
-                print("Creating {}.\n".format(species_dir))
+  #         if not os.path.isdir(species_dir):
+  #             os.mkdir(species_dir)
+  #             print("Creating {}.\n".format(species_dir))
 
-            for accession in accessions_in_latest_dirs:
-                accession_id = accession.split("/")[-1]
-                try:
-                    source_fasta = os.path.join(local_mirror, accession_id, "{}_genomic.fna.gz".format(accession_id))
-                    destination = os.path.join(species_dir, "{}_genomic.fna.gz".format(accession_id))
-                    shutil.copyfile(source_fasta, destination)
-                    print("Copied {} to {}\n.".format(source_fasta, destination))
-                except shutil.SameFileError: # Skip files that already exist in destination
-                    continue
-                except FileNotFoundError:
-                    missing_files = os.path.join(local_mirror, "missing_files.txt")
-                    with open(missing_files, "a") as f:
-                        f.write(accession)
-        except error_temp: # skip organisms with no latest_assembly_dir
-            continue
+  #         for accession in accessions_in_latest_dirs:
+  #             accession_id = accession.split("/")[-1]
+  #             try:
+  #                 source_fasta = os.path.join(local_mirror, accession_id, "{}_genomic.fna.gz".format(accession_id))
+  #                 destination = os.path.join(species_dir, "{}_genomic.fna.gz".format(accession_id))
+  #                 shutil.copyfile(source_fasta, destination)
+  #                 print("Copied {} to {}\n.".format(source_fasta, destination))
+  #             except shutil.SameFileError: # Skip files that already exist in destination
+  #                 continue
+  #             except FileNotFoundError:
+  #                 missing_files = os.path.join(local_mirror, "missing_files.txt")
+  #                 with open(missing_files, "a") as f:
+  #                     f.write(accession)
+  #     except error_temp: # skip organisms with no latest_assembly_dir
+  #         continue
 
 def ftp_paths_from_assembly_summary(local_mirror):
 
