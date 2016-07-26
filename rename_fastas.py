@@ -3,7 +3,7 @@ import os, re, argparse
 import pandas as pd
 
 # remove duplicate strings during renaming
-def rmduplicates(seq):
+def rm_duplicates(seq):
     seen = set()
     seen_add = seen.add
     return [x for x in seq if not (x in seen or seen_add(x))]
@@ -27,11 +27,11 @@ def rename(renametarget):
                 strain = df.get_value(id, 'infraspecific_name')
                 assembly_level  = df.get_value(id, 'assembly_level')
                 newname = '{}_{}_{}_{}.fasta'.format(id, org_name, strain, assembly_level)
-                rmwords = re.compile( r'((?<=_)(sp|sub|substr|subsp|str|strain)(?=_))' )
-                newname = rmwords.sub('_', newname)
+                rm_words = re.compile( r'((?<=_)(sp|sub|substr|subsp|str|strain)(?=_))' )
+                newname = rm_words.sub('_', newname)
                 newname = re.sub(r'_+', '_', newname )
                 newname = newname.split('_')
-                newname = rmduplicates(newname)
+                newname = rm_duplicates(newname)
                 newname = '_'.join(newname)
                 print(newname)
                 old = os.path.join(root, f)
