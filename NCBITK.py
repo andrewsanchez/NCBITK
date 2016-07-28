@@ -216,7 +216,7 @@ def rsync_latest_fastas_from_assembly_summary(local_mirror, fasta_list):
     Get all latest fastas latest assembly_summary.txt
     """
 
-    rsync_log = os.path.join(local_mirror, "rsync_log_{}.txt".format(strftime("%y/%m/%d_%H:%M")))
+    rsync_log = os.path.join(local_mirror, "rsync_log_{}.txt".format(strftime("%y-%m-%d_%H_%M")))
 
     call(['rsync',
         '--chmod=ugo=rwX', # Change permissions so files can be copied/renamed
@@ -351,9 +351,9 @@ def Main():
 
     local_mirror = args.local_mirror.strip("/")
     get_assembly_summary(args.no_wget, local_mirror)
-    clean_up_files_and_dirs(local_mirror, assembly_summary_df)
     check_dirs(local_mirror)
     assembly_summary_df = assembly_summary_to_df(local_mirror)
+    clean_up_files_and_dirs(local_mirror, assembly_summary_df)
 
     if args.from_file:
         organism_list = get_species_list_from_file(args.from_file)
