@@ -8,42 +8,43 @@ def rm_duplicates(seq):
     seen_add = seen.add
     return [x for x in seq if not (x in seen or seen_add(x))]
 
-def rename(renametarget):
-    # clean up assembly_summary.txt
-    df = pd.read_csv('assembly_summary.txt', delimiter='\t', index_col=0, skiprows=1)
-    df.update(df['infraspecific_name'][(df['infraspecific_name'].isnull()) & (df['isolate'].isnull())].fillna('NA'))
-    df.update(df['infraspecific_name'][(df['infraspecific_name'].isnull()) & (df['isolate'].notnull())].fillna(df['isolate']))
-    df.assembly_level.replace({' ': '_'}, regex=True, inplace=True)
-    df.organism_name.replace({' ': '_'}, regex=True, inplace=True)
-    df.organism_name.replace({'[\W]': '_'}, regex=True, inplace=True)
-    df.infraspecific_name.replace({'[\W]': '_'}, regex=True, inplace=True)
+def rename(target_dir, assembly_summary_df):
 
-    for root, dirs, files in os.walk(renametarget):
+    # clean up assembly_summary.txt
+
+    assembly_summary_df.update(assembly_summary_df['infraspecific_name'][(assembly_summary_df['infraspecific_name'].isnull()) & (assembly_summary_df['isolate'].isnull())].fillna('NA'))
+    assembly_summary_df.update(assembly_summary_df['infraspecific_name'][(assembly_summary_df['infraspecific_name'].isnull()) & (assembly_summary_df['isolate'].notnull())].fillna(assembly_summary_df['isolate']))
+    assembly_summary_df.assembly_level.replace({' ': '_'}, regex=True, inplace=True)
+    assembly_summary_df.organism_name.replace({' ': '_'}, regex=True, inplace=True)
+    assembly_summary_df.organism_name.replace({'[\W]': '_'}, regex=True, inplace=True)
+    assembly_summary_df.infraspecific_name.replace({'[\W]': '_'}, regex=True, inplace=True)
+
+    for root, dirs, files in os.walk(target_dir):
         for f in files:
-            id = (f.split('_')[0:2])
-            id = ('_'.join(id))
-            if id in df.index:
-                org_name = df.get_value(id, 'organism_name')
-                strain = df.get_value(id, 'infraspecific_name')
-                assembly_level  = df.get_value(id, 'assembly_level')
-                newname = '{}_{}_{}_{}.fasta'.format(id, org_name, strain, assembly_level)
-                rm_words = re.compile( r'((?<=_)(sp|sub|substr|subsp|str|strain)(?=_))' )
-                newname = rm_words.sub('_', newname)
-                newname = re.sub(r'_+', '_', newname )
-                newname = newname.split('_')
-                newname = rm_duplicates(newname)
-                newname = '_'.join(newname)
-                print(newname)
-                old = os.path.join(root, f)
-                new = os.path.join(root, newname)
-                os.rename(old, new)
+            if f.startswith("GCA"):
+                assembly_summary_id = "_".join(f.split('_')[0:2])
+                if assembly_summary_id in assembly_summary_df.index:
+                    org_name = assembly_summary_df.get_value(assembly_summary_id, 'organism_name')
+                    strain = assembly_summary_df.get_value(assembly_summary_id, 'infraspecific_name')
+                    assembly_level  = assembly_summary_df.get_value(assembly_summary_id, 'assembly_level')
+                    new_name = '{}_{}_{}_{}.fasta'.format(assembly_summary_id, org_name, strain, assembly_level)
+                    rm_words = re.compile( r'((?<=_)(sp|sub|substr|subsp|str|strain)(?=_))' )
+                    new_name = rm_words.sub('_', new_name)
+                    new_name = re.sub(r'_+', '_', new_name )
+                    new_name = new_name.split('_')
+                    new_name = rm_duplicates(new_name)
+                    new_name = '_'.join(new_name)
+                    old = os.path.join(root, f)
+                    new = os.path.join(root, new_name)
+                    os.rename(old, new)
 
 def Main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('rename_target', help = 'The folder whose contents will be renamed', type=str)
+    parser.add_argument('target_dir', help = 'The folder whose contents will be renamed', type=str)
+    parser.add_argument('-s', '--source', help = 'Specify a directory to rename.', action="store_true")
     args = parser.parse_args()
 
-    rename(args.rename_target)
+    rename(args.target_dir, assembly_summary_df)
 
 if __name__ == '__main__':
     Main()
