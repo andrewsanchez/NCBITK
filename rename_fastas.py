@@ -2,18 +2,30 @@
 import os, re, argparse
 import pandas as pd
 
-# remove duplicate strings during renaming
 def rm_duplicates(seq):
+
+    """
+    remove duplicate strings during renaming
+    """
+
     seen = set()
     seen_add = seen.add
     return [x for x in seq if not (x in seen or seen_add(x))]
 
 def rename(target_dir, assembly_summary_df):
 
-    # clean up assembly_summary.txt
+    """
+    Clean up assembly_summary.txt and renamed FASTA's.
+    """
 
-    assembly_summary_df.update(assembly_summary_df['infraspecific_name'][(assembly_summary_df['infraspecific_name'].isnull()) & (assembly_summary_df['isolate'].isnull())].fillna('NA'))
-    assembly_summary_df.update(assembly_summary_df['infraspecific_name'][(assembly_summary_df['infraspecific_name'].isnull()) & (assembly_summary_df['isolate'].notnull())].fillna(assembly_summary_df['isolate']))
+    # If infraspecific_name and isolate columns are empty, fill infraspecific_name with "NA"
+    assembly_summary_df.update(assembly_summary_df['infraspecific_name'][(assembly_summary_df['infraspecific_name'].isnull()) &\
+            (assembly_summary_df['isolate'].isnull())].fillna('NA'))
+
+    # If infraspecific_name column is empty and isolate column is not empty, fill infraspecific_name with the value of isolate.
+    assembly_summary_df.update(assembly_summary_df['infraspecific_name'][(assembly_summary_df['infraspecific_name'].isnull()) &\
+            (assembly_summary_df['isolate'].notnull())].fillna(assembly_summary_df['isolate']))
+
     assembly_summary_df.assembly_level.replace({' ': '_'}, regex=True, inplace=True)
     assembly_summary_df.organism_name.replace({' ': '_'}, regex=True, inplace=True)
     assembly_summary_df.organism_name.replace({'[\W]': '_'}, regex=True, inplace=True)

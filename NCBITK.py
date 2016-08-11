@@ -139,7 +139,7 @@ def get_accessions_in_latest_dirs(local_mirror, complete_species_list):
     def write_species_and_accession_ids():
         latest = os.path.join(species, "latest_assembly_versions")
         accessions_in_latest_dirs = [accession.split("/")[-1] for accession in ftp.nlst(latest)]
-        accessions_in_latest_dirs = [accession.split("_")[0:2] for accession in accessions_in_latest_dirs]
+        accessions_in_latest_dirs = ["_".join(accession.split("_")[0:2]) for accession in accessions_in_latest_dirs]
         with open(species_and_accession_ids, "a") as f:
             for accession in accessions_in_latest_dirs:
                 f.write("{},{}\n".format(species, accession))
@@ -159,12 +159,6 @@ def get_accessions_in_latest_dirs(local_mirror, complete_species_list):
             except error_temp:
                 with open(ftp_stats, "a") as stats:
                     stats.write("{} - No latest_assembly_versions dir:  {}\n".format(strftime("%y/%m/%d"), species))
-          # with open(species_and_accession_ids, "a") as f:
-          #     for accession in accessions_in_latest_dirs:
-          #         f.write("{},{}\n".format(species, accession))
-          # with open(species_and_accession_ids, "a") as f:
-          #     for accession in accessions_in_latest_dirs:
-          #         f.write("{},{}\n".format(species, accession))
 
 def get_dir_structure(local_mirror, ftp, complete_species_list):
 
@@ -177,6 +171,10 @@ def get_dir_structure(local_mirror, ftp, complete_species_list):
 
 def mk_dir_structure(local_mirror, assembly_summary_df):
 
+    """
+    Write decompressed FASTA's to renamed_dir and rename files.
+    """
+
     import gzip
 
     renamed_dir = "{}_renamed".format(local_mirror)
@@ -184,18 +182,17 @@ def mk_dir_structure(local_mirror, assembly_summary_df):
 
     with open(species_and_accession_ids) as f:
         for line in f:
-            species = line.split(",")[0]
-            species_dir = os.path.join(renamed_dir, species)
-            if not os.path.isdir(species_dir):
-                print("Creating {}.\n".format(species_dir))
-                os.mkdir(species_dir)
-
             complete_id = line.split(",")[1].strip()
             assembly_id = "_".join(complete_id.split("_")[0:2])
             if assembly_id in assembly_summary_df.index:
+                species = line.split(",")[0]
+                species_dir = os.path.join(renamed_dir, species)
+                if not os.path.isdir(species_dir):
+                    print("Creating {}.\n".format(species_dir))
+                    os.mkdir(species_dir)
+
                 source = os.path.join(local_mirror, complete_id, "{}_genomic.fna.gz".format(complete_id))
                 destination = os.path.join(species_dir, "{}.fasta".format(complete_id))
-
                 if not os.path.isfile(destination):
                     print("Updating {}\n".format(species_dir))
                     zipped = gzip.open(source)
@@ -398,21 +395,27 @@ def Main():
     import argparse 
 
     parser = argparse.ArgumentParser(description = "Sync with NCBI's database and organize them in a sane way.")
-    parser.add_argument('local_mirror', help = 'Directory to save fastas', type=str)
-    parser.add_argument('-f', '--from_file', help = 'Specify a file containing a list of species and/or genera to sync with.  Should contain one species or genera per line.  Species must exactly match the name of directories at ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/')
-    parser.add_argument('-l', '--from_list', help = 'Space separated list of species and/or genera to download.  Species must exactly match the name of \
-            directories at ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/ OR a genus, e.g.: "Clostridium, Escherichia, Bacillus_anthracis"', nargs="+")
-    parser.add_argument('-r', '--rename', action = "store_true")
-    parser.add_argument('-t', '--rename_target')
-    parser.add_argument('-W', '--no-wget', help = "Skip downloading current assembly_summary.txt", action='store_false')
+    parser.add_argument("local_mirror", help = "Directory to save fastas", type=str)
+    parser.add_argument("-f", "--from_file", help = "Specify file containing list of species and/or genera to sync with.\
+            Should contain one species or genera per line.  Species must exactly match the name of directories at\
+            ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/")
+
+    parser.add_argument("-l", "--from_list", help = "Space separated list of species and/or genera to download.\
+            Species must exactly match the name of directories at ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/\
+            OR a genus, e.g.: 'Clostridium, Escherichia, Bacillus_anthracis'", nargs="+")
+
+    parser.add_argument("-r", "--rename", action = "store_true")
+    parser.add_argument("-t", "--rename_target", help="Use this option to specify a directory, e.g.\
+            Escherichia_coli if you want to rename just one species")
+    parser.add_argument("-W", "--no-wget", help = "Skip downloading current assembly_summary.txt", action="store_false")
     args = parser.parse_args()
 
     local_mirror = args.local_mirror.strip("/")
     renamed_dir = "{}_renamed".format(local_mirror)
     check_dirs(local_mirror)
-#   get_assembly_summary(args.no_wget, local_mirror)
+    get_assembly_summary(args.no_wget, local_mirror)
     assembly_summary_df = assembly_summary_to_df(local_mirror)
-#   clean_up_files_and_dirs(local_mirror, assembly_summary_df)
+    clean_up_files_and_dirs(local_mirror, assembly_summary_df)
 
 #   if args.from_file:
 #       organism_list = get_species_list_from_file(args.from_file)
