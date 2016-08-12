@@ -17,8 +17,8 @@ def mash(fasta_dir):
     clean_up_matrix_and_get_quantiles(distance_matrix)
 
 def clean_up_matrix_and_get_quantiles(distance_matrix):
+
     distances_df = pd.read_csv(distance_matrix, index_col=0, delimiter="\t")
-  # distances_pass_fail = os.path.join(fasta_dir, "distance_matrix_pass_fail.csv")
     new_index = []
     for i in distances_df.index:
         name = i.split("/")[-1]
@@ -29,6 +29,7 @@ def clean_up_matrix_and_get_quantiles(distance_matrix):
     distances_df.columns = new_index
     distances_df.to_csv(distance_matrix, sep="\t")
 
+  # distances_pass_fail = os.path.join(fasta_dir, "distance_matrix_pass_fail.csv")
   # distances_upper_percentile = distances_df.quantile(upper_percentile)
   # pass_fail_distances = pd.DataFrame(index=distances_df.index)
 
@@ -50,7 +51,7 @@ def generate_fasta_stats(fasta_dir, distance_matrix):
         accessions = []
         contig_totals = []
         lengths = []
-        N_Counts = []
+        n_counts = []
 
         for f in files:
             if f.endswith(".fasta"):
@@ -60,7 +61,6 @@ def generate_fasta_stats(fasta_dir, distance_matrix):
                 fasta = (os.path.join(root, f))
 
                 # Read all contigs for current fasta into list
-                # Append the total number of contigs to contig_totals
                 try:
                     contigs = [ seq.seq for seq in SeqIO.parse(fasta, "fasta") ]
                 except UnicodeDecodeError:
@@ -68,40 +68,42 @@ def generate_fasta_stats(fasta_dir, distance_matrix):
                     with open(os.path.join(fasta_dir, "quality_filters_log.txt"), "a") as log:
                         log.write("{} threw UnicodeDecodeError".format(f))
 
+                # Append the total number of contigs to contig_totals
                 contig_totals.append(len(contigs))
 
                 # Read the length of each contig into a list
-                # Append the sum of all contig lengths to lengths
                 contig_lengths = [ len(str(seq)) for seq in contigs ]
+                # Append the sum of all contig lengths to lengths
                 lengths.append(sum(contig_lengths))
 
                 # Read the N_Count for each contig into a list
-                # Append the total N_Count to N_Counts
                 N_Count = [ int(str(seq.upper()).count("N")) for seq in contigs ]
-                N_Counts.append(sum(N_Count))
+                # Append the total N_Count to n_counts
+                n_counts.append(sum(N_Count))
 
-        SeqDataSet = list(zip(contig_totals, lengths, N_Counts, avg_distances))
+        SeqDataSet = list(zip(contig_totals, lengths, n_counts, avg_distances))
         stats_df = pd.DataFrame(data = SeqDataSet, index=accessions, columns=["Contigs", "Total_Length", "N_Count", "Avg_Distances"], dtype="float64")
         stats_df.to_csv(os.path.join(root, "stats.csv"), index_label="Accession")
 
         return stats_df
 
 def assess_stats_df(fasta_dir, stats_df, max_n_count, max_contigs, lower_percentile, upper_percentile):
-    print(stats_df.quantile([lower_percentile, upper_percentile]))
+
     quantiles_stats = stats_df.quantile([lower_percentile, upper_percentile])
-    print("Quantiles:", end="\n\n")
-    print(quantiles_stats)
     lower_percentiles = quantiles_stats.loc[lower_percentile]
     upper_percentiles = quantiles_stats.loc[upper_percentile]
-    print("Percentiles:  ", end="\n\n")
-    print(quantiles_stats)
 
     passed_df = stats_df[stats_df["N_Count"] <= max_n_count ]
-    print("passed_df\n\n")
-    print(passed_df)
     passed_df = passed_df[passed_df["Contigs"] <= max_contigs ]
+
+    print(passed_df.mean())
+    print(passed_df.std())
+    print(passed_df.var())
+    print(passed_df.median())
+    #if passed_df.max():
     passed_df = passed_df[(passed_df["Total_Length"] >= lower_percentiles["Total_Length"]) &
             (passed_df["Total_Length"] <= upper_percentiles["Total_Length"])]
+
     passed_df = passed_df[(passed_df["Avg_Distances"] >= lower_percentiles["Avg_Distances"]) &
             (passed_df["Avg_Distances"] <= upper_percentiles["Avg_Distances"])]
 

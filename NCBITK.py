@@ -139,7 +139,7 @@ def get_accessions_in_latest_dirs(local_mirror, complete_species_list):
     def write_species_and_accession_ids():
         latest = os.path.join(species, "latest_assembly_versions")
         accessions_in_latest_dirs = [accession.split("/")[-1] for accession in ftp.nlst(latest)]
-        accessions_in_latest_dirs = ["_".join(accession.split("_")[0:2]) for accession in accessions_in_latest_dirs]
+      # accessions_in_latest_dirs = ["_".join(accession.split("_")[0:2]) for accession in accessions_in_latest_dirs]
         with open(species_and_accession_ids, "a") as f:
             for accession in accessions_in_latest_dirs:
                 f.write("{},{}\n".format(species, accession))
