@@ -2,6 +2,7 @@
 
 import os, argparse
 from subprocess import Popen
+from shutil import rmtree
 import pandas as pd
 from Bio import SeqIO
 
@@ -14,9 +15,13 @@ def mash(fasta_dir):
     distance_command = "{} dist -p 4 -t {} {} > {}".format(mash, sketch_file, all_fastas, distance_matrix)
     Popen(sketch_command, shell="True").wait()
     Popen(distance_command, shell="True").wait()
-    clean_up_matrix_and_get_quantiles(distance_matrix)
+    clean_up_matrix(distance_matrix)
 
-def clean_up_matrix_and_get_quantiles(distance_matrix):
+def clean_up_matrix(distance_matrix):
+
+    """
+    Sets indices and headers to the accession ID's
+    """
 
     distances_df = pd.read_csv(distance_matrix, index_col=0, delimiter="\t")
     new_index = []
@@ -28,6 +33,8 @@ def clean_up_matrix_and_get_quantiles(distance_matrix):
     distances_df.index = new_index
     distances_df.columns = new_index
     distances_df.to_csv(distance_matrix, sep="\t")
+
+def dist_matrix_quantiles():
 
   # distances_pass_fail = os.path.join(fasta_dir, "distance_matrix_pass_fail.csv")
   # distances_upper_percentile = distances_df.quantile(upper_percentile)
@@ -41,6 +48,7 @@ def clean_up_matrix_and_get_quantiles(distance_matrix):
   #             pass_fail_distances[accession] = "P"
 
   # distances_df.to_csv(distances_pass_fail, sep="\t")
+  pass
 
 def generate_fasta_stats(fasta_dir, distance_matrix):
 
@@ -48,7 +56,7 @@ def generate_fasta_stats(fasta_dir, distance_matrix):
     avg_distances = ["{:05.4f}".format(i) for i in distances_df.mean()]
 
     for root, dirs, files, in os.walk(fasta_dir):
-        accessions = []
+        file_names = []
         contig_totals = []
         lengths = []
         n_counts = []
@@ -56,9 +64,8 @@ def generate_fasta_stats(fasta_dir, distance_matrix):
         for f in files:
             if f.endswith(".fasta"):
                 print("Getting stats for {}".format(f))
-                accession = f.split("_")[0:2]
-                accessions.append("_".join(accession))
                 fasta = (os.path.join(root, f))
+                file_names.append(fasta)
 
                 # Read all contigs for current fasta into list
                 try:
@@ -82,7 +89,7 @@ def generate_fasta_stats(fasta_dir, distance_matrix):
                 n_counts.append(sum(N_Count))
 
         SeqDataSet = list(zip(contig_totals, lengths, n_counts, avg_distances))
-        stats_df = pd.DataFrame(data = SeqDataSet, index=accessions, columns=["Contigs", "Total_Length", "N_Count", "Avg_Distances"], dtype="float64")
+        stats_df = pd.DataFrame(data = SeqDataSet, index=file_names, columns=["Contigs", "Total_Length", "N_Count", "Avg_Distances"], dtype="float64")
         stats_df.to_csv(os.path.join(root, "stats.csv"), index_label="Accession")
 
         return stats_df
@@ -94,25 +101,19 @@ def assess_stats_df(fasta_dir, stats_df, max_n_count, max_contigs, lower_percent
     upper_percentiles = quantiles_stats.loc[upper_percentile]
 
     passed_df = stats_df[stats_df["N_Count"] <= max_n_count ]
+
     passed_df = passed_df[passed_df["Contigs"] <= max_contigs ]
 
-    print(passed_df.mean())
-    print(passed_df.std())
-    print(passed_df.var())
-    print(passed_df.median())
-    #if passed_df.max():
     passed_df = passed_df[(passed_df["Total_Length"] >= lower_percentiles["Total_Length"]) &
             (passed_df["Total_Length"] <= upper_percentiles["Total_Length"])]
 
     passed_df = passed_df[(passed_df["Avg_Distances"] >= lower_percentiles["Avg_Distances"]) &
             (passed_df["Avg_Distances"] <= upper_percentiles["Avg_Distances"])]
 
-    passed_files = os.path.join(fasta_dir, "passed.txt")
-    if os.path.isfile(passed_files):
-        os.remove(passed_files)
-    for accession in passed_df.index:
-        with open(passed_files, "a") as f:
-            f.write(accession+"\n")
+    passed_dir = make_passed_dir(fasta_dir)
+    for source in passed_df.index:
+        dst = os.path.join(passed_dir, source.split("/")[-1])
+        os.link(source, dst)
 
 def bool_df_for_failed(fasta_dir, stats_df, max_n_count, max_contigs, lower_percentile, upper_percentile):
     quantiles_stats = stats_df.quantile([lower_percentile, upper_percentile])
@@ -148,6 +149,17 @@ def bool_df_for_failed(fasta_dir, stats_df, max_n_count, max_contigs, lower_perc
     bool_df.to_csv(os.path.join(fasta_dir, "failed_tf.csv"))
     stats_df.to_csv(os.path.join(fasta_dir, "failed.csv"))
 
+def make_passed_dir(fasta_dir):
+    
+    passed_dir = os.path.join(fasta_dir, "passed")
+    if os.path.isdir(passed_dir):
+        rmtree(passed_dir)
+    if not os.path.isdir(passed_dir):
+        os.mkdir(passed_dir)
+
+    return passed_dir
+    
+
 def Main():
     parser = argparse.ArgumentParser(description = "Assess the integrity of your FASTA collection")
     parser.add_argument("fasta_dir", help = "directory containing your FASTA files")
@@ -159,14 +171,15 @@ def Main():
     args = parser.parse_args()
 
     fasta_dir = args.fasta_dir
+    passed_dir = make_passed_dir(fasta_dir)
     distance_matrix = os.path.join(fasta_dir, "distance_matrix.csv")
 
     if args.mash:
         mash(fasta_dir)
 
-#   clean_up_matrix_and_get_quantiles(distance_matrix)
+#   clean_up_matrix(distance_matrix)
     stats_df = generate_fasta_stats(fasta_dir, distance_matrix)
-    assess_stats_df(fasta_dir, stats_df, args.max_n_count, args.max_contigs, args.lower, args.upper)
+    passed_df = assess_stats_df(fasta_dir, stats_df, args.max_n_count, args.max_contigs, args.lower, args.upper)
     bool_df_for_failed(fasta_dir, stats_df, args.max_n_count, args.max_contigs, args.lower, args.upper)
 
 Main()
