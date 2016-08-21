@@ -17,6 +17,8 @@ def mash(fasta_dir):
     Popen(distance_command, shell="True").wait()
     clean_up_matrix(distance_matrix)
 
+    return distance_matrix
+
 def clean_up_matrix(distance_matrix):
 
     """
@@ -94,25 +96,74 @@ def generate_fasta_stats(fasta_dir, distance_matrix):
 
         return stats_df
 
-def assess_stats_df(fasta_dir, stats_df, max_n_count, max_contigs, lower_percentile, upper_percentile):
+def assess_stats_df(fasta_dir, stats_df, max_n_count, max_contigs, lower_percentile, upper_percentile, stds):
 
+
+    print("Stats:", end="\n\n")
+    print(stats_df)
     quantiles_stats = stats_df.quantile([lower_percentile, upper_percentile])
     lower_percentiles = quantiles_stats.loc[lower_percentile]
     upper_percentiles = quantiles_stats.loc[upper_percentile]
 
+    # Filter based on N_Count and Contigs first
     passed_df = stats_df[stats_df["N_Count"] <= max_n_count ]
 
     passed_df = passed_df[passed_df["Contigs"] <= max_contigs ]
 
-    passed_df = passed_df[(passed_df["Total_Length"] >= lower_percentiles["Total_Length"]) &
-            (passed_df["Total_Length"] <= upper_percentiles["Total_Length"])]
+    def calculate_homogeneity():
+        
+        """
+        Determine whether or not the dataset is homogeneous, 
+        i.e. the mean, median, max, and min values
+        are within a 1.5 stds of each other.
+        """
 
-    passed_df = passed_df[(passed_df["Avg_Distances"] >= lower_percentiles["Avg_Distances"]) &
-            (passed_df["Avg_Distances"] <= upper_percentiles["Avg_Distances"])]
+        # Get the absolute difference between mean/median, mean/max, and mean/min.
+        abs_dif_mean_median = abs(passed_df.mean()["Total_Length"] - passed_df.median()["Total_Length"]) 
+        abs_dif_mean_max = abs(passed_df.mean()["Total_Length"] - passed_df.max()["Total_Length"])
+        abs_dif_mean_min = abs(passed_df.mean()["Total_Length"] - passed_df.min()["Total_Length"])
+        # Calculate the standard deviation for Total_Length; multiple by stds
+        length_stds = (passed_df.std()["Total_Length"]) * stds
 
-    passed_dir = make_passed_dir(fasta_dir)
+        # Check if absolute differences are <= std * stds
+        check_median = int(abs_dif_mean_median <= (length_stds))
+        check_max = int(abs_dif_mean_max <= (length_stds))
+        check_min = int(abs_dif_mean_max <= (length_stds))
+        homogeneity_rating = check_median + check_max + check_min
+
+        print("abs_dif_mean_median:  {}".format(abs_dif_mean_median))
+        print("abs_dif_mean_max:  {}".format(abs_dif_mean_max))
+        print("abs_dif_mean_min:  {}".format(abs_dif_mean_min))
+        print("length_stds:  {}".format(length_stds))
+        print("Median results:  {}".format(check_median))
+        print("Max results:  {}".format(check_max))
+        print("Min results:  {}".format(check_min))
+
+        return int(homogeneity_rating)
+
+    homogeneity_rating = calculate_homogeneity()
+
+    if homogeneity_rating < 3:
+        print("Homogeneity rating:  {}".format(homogeneity_rating))
+        print("Dataset not homogeneous.  Filtering to commence based on percentiles.")
+        passed_df = passed_df[(passed_df["Total_Length"] >= lower_percentiles["Total_Length"]) &
+                (passed_df["Total_Length"] <= upper_percentiles["Total_Length"])]
+
+        passed_df = passed_df[(passed_df["Avg_Distances"] >= lower_percentiles["Avg_Distances"]) &
+                (passed_df["Avg_Distances"] <= upper_percentiles["Avg_Distances"])]
+    else:
+        print("Data set is homoegenous")
+
+    print("Passed:", end="\n\n")
+    print(passed_df)
+    return passed_df
+
+def generate_links_to_passed(passed_df, passed_dir):
+
     for source in passed_df.index:
+        print("{} passed.".format(source.split("/")[-1]))
         dst = os.path.join(passed_dir, source.split("/")[-1])
+        print("Linking to {}".format(dst))
         os.link(source, dst)
 
 def bool_df_for_failed(fasta_dir, stats_df, max_n_count, max_contigs, lower_percentile, upper_percentile):
@@ -163,23 +214,39 @@ def make_passed_dir(fasta_dir):
 def Main():
     parser = argparse.ArgumentParser(description = "Assess the integrity of your FASTA collection")
     parser.add_argument("fasta_dir", help = "directory containing your FASTA files")
+    parser.add_argument("-d", "--directory", help = "Specifies that `fasta_dir` is a parent directory with \
+            subdirectories for each species", action="store_true")
+    parser.add_argument("--from_list", help = "Specify a list of one more more directories to fun filters on.", nargs="+")
+    parser.add_argument("-f", "--file", help = "Specify a file containing one species directory per line.", action="store_true")
     parser.add_argument("-n", "--max_n_count", help = "Maximum number of N's acceptable", type=int, default=2000)
     parser.add_argument("-c", "--max_contigs", help = "Maximum number of contigs acceptable", type=int, default=500)
     parser.add_argument("-l", "--lower", help = "Enter the lower percentile range to filter fastas.", type=float, default=.05)
     parser.add_argument("-u", "--upper", help = "Enter the upper percentile range to filter fastas.", type=float, default=.9)
+    parser.add_argument("-s", "--stds", help = "The number of standard deviations used to define the acceptable distance \
+            between the mean and the median, min, and max value, when judging the homogeneity of the dataset", type=float, default=1.5)
     parser.add_argument("-m", "--mash", help = "Create a sketch file and distance matrix", action="store_true")
     args = parser.parse_args()
 
     fasta_dir = args.fasta_dir
-    passed_dir = make_passed_dir(fasta_dir)
-    distance_matrix = os.path.join(fasta_dir, "distance_matrix.csv")
 
-    if args.mash:
-        mash(fasta_dir)
-
-#   clean_up_matrix(distance_matrix)
-    stats_df = generate_fasta_stats(fasta_dir, distance_matrix)
-    passed_df = assess_stats_df(fasta_dir, stats_df, args.max_n_count, args.max_contigs, args.lower, args.upper)
-    bool_df_for_failed(fasta_dir, stats_df, args.max_n_count, args.max_contigs, args.lower, args.upper)
+    if args.from_list:
+        for name in args.from_list:
+            species_dir = os.path.join(fasta_dir, name)
+            distance_matrix = os.path.join(species_dir, "distance_matrix.csv")
+            mash(species_dir)
+            stats_df = generate_fasta_stats(species_dir, distance_matrix)
+            passed_df = assess_stats_df(species_dir, stats_df, args.max_n_count, args.max_contigs, args.lower, args.upper, args.stds)
+            passed_dir = make_passed_dir(species_dir)
+            generate_links_to_passed(passed_df, passed_dir)
+    else:
+        for name in os.listdir(fasta_dir):
+            if os.path.join(fasta_dir, name):
+                species_dir = os.path.join(fasta_dir, name)
+                distance_matrix = os.path.join(species_dir, "distance_matrix.csv")
+                mash(species_dir)
+                stats_df = generate_fasta_stats(species_dir, distance_matrix)
+                passed_df = assess_stats_df(species_dir, stats_df, args.max_n_count, args.max_contigs, args.lower, args.upper, args.stds)
+                passed_dir = make_passed_dir(species_dir)
+                generate_links_to_passed(passed_df, passed_dir)
 
 Main()
