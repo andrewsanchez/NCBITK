@@ -100,13 +100,53 @@ def generate_fasta_stats(fasta_dir, distance_matrix):
 
         return stats_df
 
-def assess_stats_df(fasta_dir, stats_df, max_n_count, max_contigs, lower_percentile, upper_percentile, multiplier, deviation):
+def filter_med_ad(fasta_dir, stats_df, axis, max_n_count=100, multiplier=1.5):
 
-    filter_log = os.path.join(fasta_dir, "filter_log.txt")
+    log_file = "med_ads_{}_{}_filter_log.txt".format(axis, multiplier)
+    filter_log = os.path.join(fasta_dir, log_file)
     if os.path.isfile(filter_log):
         os.remove(filter_log)
 
-    def calculate_homogeneity(axis):
+    passed_df = stats_df[stats_df["N_Count"] <= max_n_count ] # Filter based on N_Count first
+    med_ad = abs(passed_df - passed_df.median()).mean()# Median absolute deviation
+    deviation_reference = med_ad[axis] * multiplier
+
+    if axis == "Contigs":
+        contigs = passed_df[axis]
+        contigs = contigs[contigs > 10]
+        contigs = contigs[abs(contigs - med_ad[axis]) <= deviation_reference]
+        print(contigs)
+        contigs.to_csv(filter_log)
+    else:
+        passed = passed_df[axis]
+        passed = passed[abs(passed - med_ad[axis]) <= deviation_reference]
+        print(passed)
+        passed.to_csv(filter_log)
+
+def assess_stats_df(fasta_dir, stats_df, max_n_count, max_contigs, lower_percentile, upper_percentile, multiplier=1.5, deviation="med_ads"):
+
+    log_file = "{}_filter_log.txt".format(deviation)
+    filter_log = os.path.join(fasta_dir, log_file)
+    if os.path.isfile(filter_log):
+        os.remove(filter_log)
+
+    axes = ["Total_Length", "Contigs"]
+    for axis in axes:
+        if axis == "Contigs":
+            passed_df = stats_df[stats_df["Contigs"] >= 10 ]
+            passed_df = stats_df[stats_df["N_Count"] <= max_n_count ] # Filter based on N_Count first
+        else:
+            passed_df = stats_df[stats_df["N_Count"] <= max_n_count ] # Filter based on N_Count first
+
+    # Get the absolute difference between mean/median, mean/max, and mean/min.
+    # Maybe get these values, not just for median, max, and min, but for the range of values
+    # that fall within 5% of the median, max, and min?  Then take the average of those?
+    median_mean_ad = abs(passed_df.median()[axis] - passed_df.mean()[axis]) 
+    median_max_ad = abs(passed_df.median()[axis] - passed_df.max()[axis])
+    median_min_ad = abs(passed_df.median()[axis] - passed_df.min()[axis])
+    # The average or STD between the above three measures might be helpful.
+
+    def calculate_homogeneity(axis, passed_df, deviation="med_ads"):
         
         """
         Determine whether or not the dataset is homogeneous, 
@@ -115,110 +155,110 @@ def assess_stats_df(fasta_dir, stats_df, max_n_count, max_contigs, lower_percent
         Axis is the column of the DataFrame you wish to check.
         """
 
-        # Get the absolute difference between mean/median, mean/max, and mean/min.
-        # Maybe get these values, note just for median, max, and min, but for the range of values
-        # that fall within 5% of the median, max, and min?
-        # that fall within 5% of the median, max, and min?
-
-        # Use the median here instead of mean?
-        # When calculating these along the Contigs axis, do not include FASTA's with < 10 Contigs
-        median_mean_ad = abs(passed_df.median()[axis] - passed_df.mean()[axis]) 
-        median_max_ad = abs(passed_df.median()[axis] - passed_df.max()[axis])
-        median_min_ad = abs(passed_df.median()[axis] - passed_df.min()[axis])
-
-        # Calculate reference points for "normal" deviation checks; multiply by `multiplier`
-        std = passed_df.std()[axis] #  Standard deviation
-        stds = std * multiplier
-        med_ad = abs(passed_df - passed_df.median()).mean()# Median absolute deviation
-        med_ads = med_ad[axis] * multiplier
-        mad = abs(stats_df - stats_df.mean()).mean()# Mean absolute deviation
-        mads = mad[axis] * multiplier
-
         # Check if absolute differences are <= deviation * multiplier
+        # Calculate reference points for "normal" deviation checks
         # Peform these checks for the range of values referenced above?
-        if deviation == "stds":
-            print(deviation)
-            deviation == stds
-            print(deviation)
-        elif deviation == "med_ads":
-            print(deviation)
-            deviation == med_ads
-            print(deviation)
-        if deviation == "mads":
-            print(deviation)
-            deviation == mads
-            print(deviation)
-        check_median = int(median_mean_ad <= (deviation))
-        check_max = int(median_max_ad <= (deviation))
-        check_min = int(median_min_ad <= (deviation))
-        homogeneity_rating = check_median + check_max + check_min
+        def create_log(check_median, check_max, check_min, homogeneity_rating):
+            with open(filter_log, "a") as log:
+                log.write("Results for {} using {} as the deviation reference point:\n".format(axis, deviation))
+                log.write("abs(median - mean) = {}\n".format(median_mean_ad))
+                log.write("abs(median - max) = {}\n".format(median_max_ad))
+                log.write("abs(median - min) = {}\n".format(median_min_ad))
+                log.write("{} * multiplier:\n".format(deviation))
+                if deviation == "std":
+                    log.write("{} * {} = {}\n".format(std, multiplier, stds))
+                elif deviation == "med_ad":
+                    log.write("{} * {} = {}\n".format(med_ad, multiplier, med_ads))
+                elif deviation == "mad":
+                    log.write("{} * {} = {}\n".format(mad, multiplier, mads))
+                log.write("1 if abs(x-y) <= deviation * multiplier, 0 zero if not.\n")
+                log.write("Median results:  {}\n".format(check_median))
+                log.write("Max results:  {}\n".format(check_max))
+                log.write("Min results:  {}\n".format(check_min))
+                log.write("Homogeneity rating:  {}\n".format(homogeneity_rating))
+                log.write("{} total FASTA's".format(len(stats_df)))
 
-        with open(filter_log, "a") as log:
-            log.write("Results for {} using {} as the deviation reference:\n".format(axis, deviation))
-            log.write("abs(mean - median) = {}\n".format(median_mean_ad))
-            log.write("abs(mean - max) = {}\n".format(median_max_ad))
-            log.write("abs(mean - min) = {}\n".format(median_min_ad))
-            log.write("{} * multiplier:\n".format(deviation))
-            if deviation == "std":
-                log.write("{} * {} = {}\n".format(std, multiplier, stds))
-            elif deviation == "med_ad":
-                log.write("{} * {} = {}\n".format(med_ad, multiplier, med_ads))
-            elif deviation == "mad":
-                log.write("{} * {} = {}\n".format(mad, multiplier, mads))
-            log.write("1 if abs(x-y) <= deviation * multiplier, 0 zero if not.\n")
-            log.write("Median results:  {}\n".format(check_median))
-            log.write("Max results:  {}\n".format(check_max))
-            log.write("Min results:  {}\n".format(check_min))
-            log.write("Homogeneity rating:  {}\n".format(homogeneity_rating))
-            log.write("{} total FASTA's".format(len(stats_df)))
-            log.write("################################################################################")
+        def med_max_min_checks():
+            check_median = int(median_mean_ad <= (deviation_reference))
+            check_max = int(median_max_ad <= (deviation_reference))
+            check_min = int(median_min_ad <= (deviation_reference))
+            homogeneity_rating = check_median + check_max + check_min
+            create_log(check_median, check_max, check_min, homogeneity_rating)
+
+        if deviation == "stds":
+            std = passed_df.std()[axis] #  Standard deviation
+            deviation_reference = std * multiplier
+            med_max_min_checks()
+        elif deviation == "med_ads":
+            med_ad = abs(passed_df - passed_df.median()).mean()# Median absolute deviation
+            deviation_reference = med_ad[axis] * multiplier
+            med_max_min_checks()
+        elif deviation == "mads":
+            mad = abs(stats_df - stats_df.mean()).mean()# Mean absolute deviation
+            deviation_reference = mad[axis] * multiplier
+            med_max_min_checks()
+
+            # If this is used: `passed = passed_df[abs(passed_df[axis] - med_ad) <= deviation_reference]`
+            # The code below becomes completely unecessary
 
         if axis == "Contigs":
             if not check_max:
+                log.write("Filtering FASTA's above the upper percentile")
                 return "upper"
             elif check_max:
+                log.write("Dataset is homogenous")
                 return True
         else:
             if check_max and not check_min:
                 if homogeneity_rating == 2:
+                    log.write("Filtering FASTA's below the lower percentile")
                     return "lower"
                 else:
+                    log.write("Filtering FASTA's outside the upper and lower percentiles")
                     return False
             elif check_min and not check_max:
                 if homogeneity_rating == 2:
+                    log.write("Filtering FASTA's above the upper")
                     return "upper"
                 else:
+                    log.write("Filtering FASTA's outside the upper and lower percentiles")
                     return False
             elif homogeneity_rating == 3:
+                log.write("Dataset is homogenous")
                 return True
 
-    passed_df = stats_df[stats_df["N_Count"] <= max_n_count ] # Filter based on N_Count first
-    failed_df = stats_df[stats_df["N_Count"] >= max_n_count ] # Initialize the failed DataFrame
+        log.write("################################################################################")
+
+    failed_N_count_df = stats_df[stats_df["N_Count"] >= max_n_count ] # Initialize the failed DataFrame
 
     # Calculate percentiles
     quantiles_stats = passed_df.quantile([lower_percentile, upper_percentile])
     lower_percentiles = quantiles_stats.loc[lower_percentile]
     upper_percentiles = quantiles_stats.loc[upper_percentile]
 
-    axes = ["Total_Length", "Contigs"]
-    for axis in axes:
-        rating = calculate_homogeneity(axis, deviations="med_ads")
-        if not rating:
-            passed_df = passed_df[(passed_df[axis] > lower_percentiles[axis]) or
-                    (passed_df[axis] < upper_percentiles[axis])]
-            failed_df = failed_df[(failed_df[axis] <= lower_percentiles[axis]) or
-                    (failed_df[axis] >= upper_percentiles[axis])]
-        elif rating == "lower":
-            # the data are homogenous at the lower end but not the upper end
-            # filter out the upper end
-            passed_df = passed_df[(passed_df[axis] < upper_percentiles[axis])]
-            failed_df = failed_df[(failed_df[axis] >= upper_percentiles[axis])]
-        elif rating == "upper":
-            # the data are homogenous at the upper end but not the lower end
-            # filter out the lower end
-            passed_df = passed_df[(passed_df[axis] > lower_percentiles[axis])]
-            failed_df = failed_df[(failed_df[axis] <= lower_percentiles[axis])]
+    rating = calculate_homogeneity(axis, passed_df)
+    if not rating:
+        passed_df = passed_df[(passed_df[axis] > lower_percentiles[axis]) & (passed_df[axis] < upper_percentiles[axis])]
+        failed_lower_df = passed_df[(passed_df[axis] <= lower_percentiles[axis])]
+        failed_upper_df = passed_df[(passed_df[axis] >= upper_percentiles[axis])]
+    elif rating == "lower":
+        # the data are homogenous at the lower end but not the upper end
+        # filter out the upper end
+        passed_df = passed_df[(passed_df[axis] < upper_percentiles[axis])]
+        failed_upper_df = passed_df[(passed_df[axis] >= upper_percentiles[axis])]
+    elif rating == "upper":
+        # the data are homogenous at the upper end but not the lower end
+        # filter out the lower end
+        passed_df = passed_df[(passed_df[axis] > lower_percentiles[axis])]
+        failed_lower_df = passed_df[(passed_df[axis] <= lower_percentiles[axis])]
+    elif rating:
+        """
+        if rating is True, filtering will only occur based on N Count
+        """
+        pass
 
+    frames = [failed_N_count_df, failed_lower_df, failed_upper_df]
+    failed_df = pd.concat(frames)
     failed_df.to_csv(os.path.join(fasta_dir, "failed.csv"))
 
     return passed_df
@@ -249,6 +289,13 @@ def bool_df_for_failed(fasta_dir, stats_df, max_n_count, max_contigs, lower_perc
 
     lengths_bool = (stats_df.iloc[:]["Total_Length"] >= lower_percentiles["Total_Length"]) \
                    & (stats_df.iloc[:]["Total_Length"] <= upper_percentiles["Total_Length"])
+
+    passed = os.listdir(os.path.join(fasta_dir, passed))
+    total = os.listdir(fasta_dir)
+    filter_log = os.path.join(fasta_dir, "filter_log.txt")
+    with open(filter_log, "a") as log:
+        log.write("{} passed out of {}".format(len(passed), len(total)))
+
 
   # for i in stats_df.index:
   #     N_Count = stats_df.loc[i, "N_Count"]
@@ -294,6 +341,8 @@ def Main():
     parser.add_argument("-s", "--multiplier", help = "The number of standard deviations used to define the acceptable distance \
             between the mean and the median, min, and max value, when judging the homogeneity of the dataset", type=float, default=1.5)
     parser.add_argument("-m", "--mash", help = "Create a sketch file and distance matrix", action="store_true")
+    parser.add_argument("--deviation_type", help = "Which measurement to be used for the deviation reference point.\
+            options are `stds`, `med_ads`, and `mads`", type=str, default="med_ads")
     args = parser.parse_args()
 
     fasta_dir = args.fasta_dir
@@ -304,7 +353,7 @@ def Main():
             distance_matrix = os.path.join(species_dir, "distance_matrix.csv")
             mash(species_dir)
             stats_df = generate_fasta_stats(species_dir, distance_matrix)
-            passed_df = assess_stats_df(species_dir, stats_df, args.max_n_count, args.max_contigs, args.lower, args.upper, args.multiplier)
+            passed_df = assess_stats_df(species_dir, stats_df, args.max_n_count, args.max_contigs, args.lower, args.upper, args.multiplier, args.deviation_type)
             passed_dir = make_passed_dir(species_dir)
             generate_links_to_passed(passed_df, passed_dir, fasta_dir)
     else:
@@ -316,11 +365,17 @@ def Main():
                 if len(contents) <= 5:
                     continue
                 else:
-                    distance_matrix = os.path.join(species_dir, "distance_matrix.csv")
-                    mash(species_dir)
+                    distance_matrix = mash(species_dir)
                     stats_df = generate_fasta_stats(species_dir, distance_matrix)
-                    passed_df = assess_stats_df(species_dir, stats_df, args.max_n_count, args.max_contigs, args.lower, args.upper, args.multiplier)
-                    passed_dir = make_passed_dir(species_dir)
-                    generate_links_to_passed(passed_df, passed_dir, fasta_dir)
+                    axes = ["Contigs", "Total_Length"]
+                    for axis in axes:
+                        filter_med_ad(species_dir, stats_df, axis)
+                    for axis in axes:
+                        filter_med_ad(species_dir, stats_df, axis, multiplier=2)
+                    for axis in axes:
+                        filter_med_ad(species_dir, stats_df, axis, multiplier=2.5)
+                  # passed_df = assess_stats_df(species_dir, stats_df, args.max_n_count, args.max_contigs, args.lower, args.upper, args.multiplier, args.deviation_type)
+                  # passed_dir = make_passed_dir(species_dir)
+                  # generate_links_to_passed(passed_df, passed_dir, fasta_dir)
 
 Main()
