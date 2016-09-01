@@ -6,18 +6,22 @@ from shutil import rmtree
 import pandas as pd
 from Bio import SeqIO
 
-def mash(fasta_dir):
-    mash="/home/asanchez/local/bin/mash-Linux64-v1.1/mash"
-    sketch_file = os.path.join(fasta_dir, "all.msh")
-    all_fastas = os.path.join(fasta_dir, "*.fasta")
-    distance_matrix = os.path.join(fasta_dir, "distance_matrix.csv")
-    distance_med_ads = os.path.join(fasta_dir, "distance_med_ads.csv")
+def clean_up(species_dir):
+    sketch_file = os.path.join(species_dir, "all.msh")
+    distance_matrix = os.path.join(species_dir, "distance_matrix.csv")
+    filter_log = os.path.join(species_dir, "filter_log.txt")
 
-    files = ["sketch_file", "distance_matrix", "distance_med_ads"]
+    files = [sketch_file, distance_matrix, distance_med_ads, filter_log]
     for f in files:
         if os.path.isfile(f):
             os.remove(f)
 
+def mash(species_dir):
+    mash="/home/asanchez/local/bin/mash-Linux64-v1.1/mash"
+    sketch_file = os.path.join(species_dir, "all.msh")
+    all_fastas = os.path.join(species_dir, "*.fasta")
+    distance_matrix = os.path.join(species_dir, "distance_matrix.csv")
+    distance_med_ads = os.path.join(species_dir, "distance_med_ads.csv")
     sketch_command = "{} sketch -o {} {}".format(mash, sketch_file, all_fastas)
     distance_command = "{} dist -p 4 -t {} {} > {}".format(mash, sketch_file, all_fastas, distance_matrix)
     Popen(sketch_command, shell="True").wait()
@@ -43,11 +47,7 @@ def clean_up_matrix(distance_matrix):
     distances_df.columns = new_index
     distances_df.to_csv(distance_matrix, sep="\t")
 
-def generate_fasta_stats(fasta_dir, distance_matrix):
-
-    filter_log = os.path.join(fasta_dir, "filter_log.txt")
-    if os.path.isfile(filter_log):
-        os.remove(filter_log)
+def generate_fasta_stats(species_dir, distance_matrix):
 
     distances_df = pd.read_csv(distance_matrix, index_col=0, delimiter="\t")
     med_ad_distances = {}
@@ -56,7 +56,7 @@ def generate_fasta_stats(fasta_dir, distance_matrix):
 
     med_ad_distances = pd.Series(med_ad_distances)
 
-    for root, dirs, files, in os.walk(fasta_dir):
+    for root, dirs, files, in os.walk(species_dir):
         file_names = []
         contig_totals = []
         assembly_sizes = []
@@ -76,7 +76,7 @@ def generate_fasta_stats(fasta_dir, distance_matrix):
                     contigs = [ seq.seq for seq in SeqIO.parse(fasta, "fasta") ]
                 except UnicodeDecodeError:
                     print("{} threw UnicodeDecodeError".format(f))
-                    with open(os.path.join(fasta_dir, "filter_log.txt"), "a") as log:
+                    with open(os.path.join(species_dir, "filter_log.txt"), "a") as log:
                         log.write("{} threw UnicodeDecodeError\n".format(f))
 
                 # Append the total number of contigs to contig_totals
@@ -100,12 +100,12 @@ def generate_fasta_stats(fasta_dir, distance_matrix):
 
         return stats_df
 
-def filter_med_ad(fasta_dir, stats_df, max_n_count=100, multiplier=1.5):
+def filter_med_ad(species_dir, stats_df, max_n_count=100, multiplier=1.5):
 
     passed_log = "passed_{}.txt".format(multiplier)
     failed_log = "failed_{}.txt".format(multiplier)
-    passed_log = os.path.join(fasta_dir, passed_log)
-    failed_log = os.path.join(fasta_dir, failed_log)
+    passed_log = os.path.join(species_dir, passed_log)
+    failed_log = os.path.join(species_dir, failed_log)
     if os.path.isfile(passed_log):
         os.remove(passed_log)
     if os.path.isfile(failed_log):
@@ -138,10 +138,10 @@ def filter_med_ad(fasta_dir, stats_df, max_n_count=100, multiplier=1.5):
 
     failed.to_csv(failed_log, header=True)
 
-def assess_stats_df(fasta_dir, stats_df, max_n_count, max_contigs, lower_percentile, upper_percentile, multiplier=1.5, deviation="med_ads"):
+def assess_stats_df(species_dir, stats_df, max_n_count, max_contigs, lower_percentile, upper_percentile, multiplier=1.5, deviation="med_ads"):
 
     log_file = "{}_filter_log.txt".format(deviation)
-    filter_log = os.path.join(fasta_dir, log_file)
+    filter_log = os.path.join(species_dir, log_file)
     if os.path.isfile(filter_log):
         os.remove(filter_log)
 
@@ -274,13 +274,13 @@ def assess_stats_df(fasta_dir, stats_df, max_n_count, max_contigs, lower_percent
 
     frames = [failed_N_count_df, failed_lower_df, failed_upper_df]
     failed_df = pd.concat(frames)
-    failed_df.to_csv(os.path.join(fasta_dir, "failed.csv"))
+    failed_df.to_csv(os.path.join(species_dir, "failed.csv"))
 
     return passed_df
 
-def generate_links_to_passed(passed_df, passed_dir, fasta_dir):
+def generate_links_to_passed(passed_df, passed_dir, species_dir):
 
-    filter_log = os.path.join(fasta_dir, "filter_log.txt")
+    filter_log = os.path.join(species_dir, "filter_log.txt")
     with open(filter_log, "a") as log:
         log.write("{} FASTA's passed".format(len(passed_df)))
 
@@ -290,7 +290,7 @@ def generate_links_to_passed(passed_df, passed_dir, fasta_dir):
         print("Linking to {}".format(dst))
         os.link(source, dst)
 
-def bool_df_for_failed(fasta_dir, stats_df, max_n_count, max_contigs, lower_percentile, upper_percentile):
+def bool_df_for_failed(species_dir, stats_df, max_n_count, max_contigs, lower_percentile, upper_percentile):
 
     quantiles_stats = stats_df.quantile([lower_percentile, upper_percentile])
     lower_percentiles = quantiles_stats.loc[lower_percentile]
@@ -305,9 +305,9 @@ def bool_df_for_failed(fasta_dir, stats_df, max_n_count, max_contigs, lower_perc
     lengths_bool = (stats_df.iloc[:]["Assembly_Size"] >= lower_percentiles["Total_Length"]) \
                    & (stats_df.iloc[:]["Assembly_Size"] <= upper_percentiles["Total_Length"])
 
-    passed = os.listdir(os.path.join(fasta_dir, passed))
-    total = os.listdir(fasta_dir)
-    filter_log = os.path.join(fasta_dir, "filter_log.txt")
+    passed = os.listdir(os.path.join(species_dir, passed))
+    total = os.listdir(species_dir)
+    filter_log = os.path.join(species_dir, "filter_log.txt")
     with open(filter_log, "a") as log:
         log.write("{} passed out of {}".format(len(passed), len(total)))
 
@@ -328,12 +328,12 @@ def bool_df_for_failed(fasta_dir, stats_df, max_n_count, max_contigs, lower_perc
   #         stats_df.loc[i, "Assembly_Size"] = "*{}*".format(stats_df.loc[i, "Total_Length"])
 
     bool_df = pd.concat([lengths_bool, n_count_bool, contigs_bool, distances_bool], axis=1)
-    bool_df.to_csv(os.path.join(fasta_dir, "failed_tf.csv"))
-    stats_df.to_csv(os.path.join(fasta_dir, "failed.csv"))
+    bool_df.to_csv(os.path.join(species_dir, "failed_tf.csv"))
+    stats_df.to_csv(os.path.join(species_dir, "failed.csv"))
 
-def make_passed_dir(fasta_dir):
+def make_passed_dir(species_dir):
     
-    passed_dir = os.path.join(fasta_dir, "passed")
+    passed_dir = os.path.join(species_dir, "passed")
     if os.path.isdir(passed_dir):
         rmtree(passed_dir)
     if not os.path.isdir(passed_dir):
@@ -343,8 +343,8 @@ def make_passed_dir(fasta_dir):
     
 def Main():
     parser = argparse.ArgumentParser(description = "Assess the integrity of your FASTA collection")
-    parser.add_argument("fasta_dir", help = "directory containing your FASTA files")
-    parser.add_argument("-d", "--directory", help = "Specifies that `fasta_dir` is a parent directory with \
+    parser.add_argument("species_dir", help = "directory containing your FASTA files")
+    parser.add_argument("-d", "--directory", help = "Specifies that `species_dir` is a parent directory with \
             subdirectories for each species", action="store_true")
     parser.add_argument("--from_list", help = "Specify a list of one more more directories to fun filters on.", nargs="+")
     parser.add_argument("-f", "--file", help = "Specify a file containing one species directory per line.", action="store_true")
@@ -359,26 +359,27 @@ def Main():
             options are `stds`, `med_ads`, and `mads`", type=str, default="med_ads")
     args = parser.parse_args()
 
-    fasta_dir = args.fasta_dir
+    species_dir = args.fasta_dir
 
     if args.from_list:
         for name in args.from_list:
-            species_dir = os.path.join(fasta_dir, name)
+            species_dir = os.path.join(species_dir, name)
             distance_matrix = os.path.join(species_dir, "distance_matrix.csv")
             mash(species_dir)
             stats_df = generate_fasta_stats(species_dir, distance_matrix)
             passed_df = assess_stats_df(species_dir, stats_df, args.max_n_count, args.max_contigs, args.lower, args.upper, args.multiplier, args.deviation_type)
             passed_dir = make_passed_dir(species_dir)
-            generate_links_to_passed(passed_df, passed_dir, fasta_dir)
+            generate_links_to_passed(passed_df, passed_dir, species_dir)
     else:
-        for name in os.listdir(fasta_dir):
-            species_dir = os.path.join(fasta_dir, name)
+        for name in os.listdir(species_dir):
+            species_dir = os.path.join(species_dir, name)
             if os.path.isdir(species_dir):
                 # pass if there are <= 5 FASTA's
                 contents = os.listdir(species_dir)
                 if len(contents) <= 5:
                     continue
                 else:
+                    clean_up(species_dir)
                     distance_matrix = mash(species_dir)
                     stats_df = generate_fasta_stats(species_dir, distance_matrix)
                     filter_med_ad(species_dir, stats_df)
@@ -386,6 +387,6 @@ def Main():
                     filter_med_ad(species_dir, stats_df, multiplier=2.5)
                   # passed_df = assess_stats_df(species_dir, stats_df, args.max_n_count, args.max_contigs, args.lower, args.upper, args.multiplier, args.deviation_type)
                   # passed_dir = make_passed_dir(species_dir)
-                  # generate_links_to_passed(passed_df, passed_dir, fasta_dir)
+                  # generate_links_to_passed(passed_df, passed_dir, species_dir)
 
 Main()
