@@ -11,7 +11,7 @@ def clean_up(species_dir):
     distance_matrix = os.path.join(species_dir, "distance_matrix.csv")
     filter_log = os.path.join(species_dir, "filter_log.txt")
 
-    files = [sketch_file, distance_matrix, distance_med_ads, filter_log]
+    files = [sketch_file, distance_matrix, filter_log]
     for f in files:
         if os.path.isfile(f):
             os.remove(f)
@@ -21,38 +21,35 @@ def mash(species_dir):
     sketch_file = os.path.join(species_dir, "all.msh")
     all_fastas = os.path.join(species_dir, "*.fasta")
     distance_matrix = os.path.join(species_dir, "distance_matrix.csv")
-    distance_med_ads = os.path.join(species_dir, "distance_med_ads.csv")
     sketch_command = "{} sketch -o {} {}".format(mash, sketch_file, all_fastas)
     distance_command = "{} dist -p 4 -t {} {} > {}".format(mash, sketch_file, all_fastas, distance_matrix)
     Popen(sketch_command, shell="True").wait()
     Popen(distance_command, shell="True").wait()
-    clean_up_matrix(distance_matrix)
+    distance_matrix = pd.read_csv(distance_matrix, index_col=0, delimiter="\t")
+    clean_up_matrix(species_dir, distance_matrix)
 
     return distance_matrix
 
-def clean_up_matrix(distance_matrix):
+def clean_up_matrix(species_dir, distance_matrix):
 
     """
     Set indices and headers to the accession ID's
     """
 
-    distances_df = pd.read_csv(distance_matrix, index_col=0, delimiter="\t")
     new_index = []
-    for i in distances_df.index:
+    for i in distance_matrix.index:
         name = i.split("/")[-1].strip(".fasta")
-      # name = name.split("_")[0:2]
         new_index.append(name)
 
-    distances_df.index = new_index
-    distances_df.columns = new_index
-    distances_df.to_csv(distance_matrix, sep="\t")
+    distance_matrix.index = new_index
+    distance_matrix.columns = new_index
+    distance_matrix.to_csv(os.path.join(species_dir, "distance_matrix.ccsv"), sep="\t")
 
 def generate_fasta_stats(species_dir, distance_matrix):
 
-    distances_df = pd.read_csv(distance_matrix, index_col=0, delimiter="\t")
     med_ad_distances = {}
-    for i in distances_df:
-        med_ad_distances[i] = abs(distances_df[i] - distances_df[i].median()).mean()
+    for i in distance_matrix:
+        med_ad_distances[i] = abs(distance_matrix[i] - distance_matrix[i].median()).mean()
 
     med_ad_distances = pd.Series(med_ad_distances)
 
@@ -67,8 +64,6 @@ def generate_fasta_stats(species_dir, distance_matrix):
                 print("Getting stats for {}".format(f))
                 fasta = (os.path.join(root, f))
                 name = fasta.split("/")[-1].strip(".fasta")
-              # accession_id = accession_id.split("_")[0:2]
-              # accession_id = "_".join(accession_id)
                 file_names.append(name)
 
                 # Read all contigs for current fasta into list
@@ -83,9 +78,9 @@ def generate_fasta_stats(species_dir, distance_matrix):
                 contig_totals.append(len(contigs))
 
                 # Read the length of each contig into a list
-                contig_lengths = [ len(str(seq)) for seq in contigs ]
+                assembly_size = [ len(str(seq)) for seq in contigs ]
                 # Append the sum of all contig lengths to lengths
-                assembly_sizes.append(sum(contig_lengths))
+                assembly_sizes.append(sum(assembly_size))
 
                 # Read the N_Count for each contig into a list
                 N_Count = [ int(str(seq.upper()).count("N")) for seq in contigs ]
@@ -93,37 +88,37 @@ def generate_fasta_stats(species_dir, distance_matrix):
                 n_counts.append(sum(N_Count))
 
         SeqDataSet = list(zip(assembly_sizes, contig_totals, n_counts))
-        stats_df = pd.DataFrame(data = SeqDataSet, index=file_names, columns=["Assembly_Size", "Contigs", "N_Count"], dtype="float64")
-        stats_df["MASH"] = med_ad_distances
+        stats = pd.DataFrame(data = SeqDataSet, index=file_names, columns=["Assembly_Size", "Contigs", "N_Count"], dtype="float64")
+        stats["MASH"] = med_ad_distances
+        stats.to_csv(os.path.join(root, "stats.csv"), index_label="Accession")
 
-        stats_df.to_csv(os.path.join(root, "stats.csv"), index_label="Accession")
+        return stats
 
-        return stats_df
-
-def filter_med_ad(species_dir, stats_df, max_n_count=100, multiplier=1.5):
+def filter_med_ad(species_dir, stats, multiplier, max_n_count=100):
 
     passed_log = "passed_{}.txt".format(multiplier)
-    failed_log = "failed_{}.txt".format(multiplier)
     passed_log = os.path.join(species_dir, passed_log)
+    failed_log = "failed_{}.txt".format(multiplier)
     failed_log = os.path.join(species_dir, failed_log)
-    if os.path.isfile(passed_log):
-        os.remove(passed_log)
-    if os.path.isfile(failed_log):
-        os.remove(failed_log)
+    files = [passed_log, failed_log]
+    for f in files:
+        if os.path.isfile(f):
+            os.remove(f)
 
-    passed = stats_df[stats_df["N_Count"] <= max_n_count ] # Filter based on N_Count first
+    passed = stats[stats["N_Count"] <= max_n_count ] # Filter based on N_Count first
 
     # Deal wih contigs first
     contigs = passed["Contigs"]
-    contigs = contigs[contigs > 10] # Exclude genomes with < 10 contigs.  They automatically pass.
+    contigs = contigs[contigs > 10] # Genomes with < 10 contigs automatically pass.
     contigs_lower = contigs[contigs < 10] # Save genomes with < 10 contigs to add them back in later.
     contigs_med_ad = abs(contigs - contigs.median()).mean()# Median absolute deviation
     contigs_deviation_reference = contigs_med_ad * multiplier
     contigs = contigs[abs(contigs - contigs.median()) <= contigs_deviation_reference]
+  # passed = passed[abs(passed["Contigs"] - passed["Contigs"].median()) <= contigs_deviation_reference]
     contigs = pd.concat([contigs, contigs_lower])
-
-    del passed["Contigs"]
-    passed["Contigs"] = contigs
+    failed_contigs = [i for i in passed.index if i not in contigs.index]
+    for i in failed_contigs:
+        passed.drop(i, inplace=True)
 
     axes = ["Assembly_Size", "N_Count", "MASH"]
     for axis in axes:
@@ -133,12 +128,12 @@ def filter_med_ad(species_dir, stats_df, max_n_count=100, multiplier=1.5):
 
     passed.to_csv(passed_log, header=True)
 
-    failed_ids = [i for i in stats_df.index if i not in passed.index]
-    failed = stats_df.loc[failed_ids, :]
+    failed_ids = [i for i in stats.index if i not in passed.index]
+    failed = stats.loc[failed_ids, :]
 
     failed.to_csv(failed_log, header=True)
 
-def assess_stats_df(species_dir, stats_df, max_n_count, max_contigs, lower_percentile, upper_percentile, multiplier=1.5, deviation="med_ads"):
+def assess_stats(species_dir, stats, max_n_count, max_contigs, lower_percentile, upper_percentile, multiplier=1.5, deviation="med_ads"):
 
     log_file = "{}_filter_log.txt".format(deviation)
     filter_log = os.path.join(species_dir, log_file)
@@ -148,10 +143,10 @@ def assess_stats_df(species_dir, stats_df, max_n_count, max_contigs, lower_perce
     axes = ["Assembly_Size", "Contigs"]
     for axis in axes:
         if axis == "Contigs":
-            passed_df = stats_df[stats_df["Contigs"] >= 10 ]
-            passed_df = stats_df[stats_df["N_Count"] <= max_n_count ] # Filter based on N_Count first
+            passed_df = stats[stats["Contigs"] >= 10 ]
+            passed_df = stats[stats["N_Count"] <= max_n_count ] # Filter based on N_Count first
         else:
-            passed_df = stats_df[stats_df["N_Count"] <= max_n_count ] # Filter based on N_Count first
+            passed_df = stats[stats["N_Count"] <= max_n_count ] # Filter based on N_Count first
 
     # Get the absolute difference between mean/median, mean/max, and mean/min.
     # Maybe get these values, not just for median, max, and min, but for the range of values
@@ -191,7 +186,7 @@ def assess_stats_df(species_dir, stats_df, max_n_count, max_contigs, lower_perce
                 log.write("Max results:  {}\n".format(check_max))
                 log.write("Min results:  {}\n".format(check_min))
                 log.write("Homogeneity rating:  {}\n".format(homogeneity_rating))
-                log.write("{} total FASTA's".format(len(stats_df)))
+                log.write("{} total FASTA's".format(len(stats)))
 
         def med_max_min_checks():
             check_median = int(median_mean_ad <= (deviation_reference))
@@ -209,7 +204,7 @@ def assess_stats_df(species_dir, stats_df, max_n_count, max_contigs, lower_perce
             deviation_reference = med_ad[axis] * multiplier
             med_max_min_checks()
         elif deviation == "mads":
-            mad = abs(stats_df - stats_df.mean()).mean()# Mean absolute deviation
+            mad = abs(stats - stats.mean()).mean()# Mean absolute deviation
             deviation_reference = mad[axis] * multiplier
             med_max_min_checks()
 
@@ -244,7 +239,7 @@ def assess_stats_df(species_dir, stats_df, max_n_count, max_contigs, lower_perce
 
         log.write("################################################################################")
 
-    failed_N_count_df = stats_df[stats_df["N_Count"] >= max_n_count ] # Initialize the failed DataFrame
+    failed_N_count_df = stats[stats["N_Count"] >= max_n_count ] # Initialize the failed DataFrame
 
     # Calculate percentiles
     quantiles_stats = passed_df.quantile([lower_percentile, upper_percentile])
@@ -290,20 +285,20 @@ def generate_links_to_passed(passed_df, passed_dir, species_dir):
         print("Linking to {}".format(dst))
         os.link(source, dst)
 
-def bool_df_for_failed(species_dir, stats_df, max_n_count, max_contigs, lower_percentile, upper_percentile):
+def bool_df_for_failed(species_dir, stats, max_n_count, max_contigs, lower_percentile, upper_percentile):
 
-    quantiles_stats = stats_df.quantile([lower_percentile, upper_percentile])
+    quantiles_stats = stats.quantile([lower_percentile, upper_percentile])
     lower_percentiles = quantiles_stats.loc[lower_percentile]
     upper_percentiles = quantiles_stats.loc[upper_percentile]
 
-    n_count_bool = (stats_df.iloc[:]["N_Count"]) <= max_n_count
-    contigs_bool = (stats_df.iloc[:]["Contigs"]) <= max_contigs
+    n_count_bool = (stats.iloc[:]["N_Count"]) <= max_n_count
+    contigs_bool = (stats.iloc[:]["Contigs"]) <= max_contigs
 
-    distances_bool = (stats_df.iloc[:]["Avg_Distances"] >= lower_percentiles["Avg_Distances"]) \
-                   & (stats_df.iloc[:]["Avg_Distances"] <= upper_percentiles["Avg_Distances"])
+    distances_bool = (stats.iloc[:]["Avg_Distances"] >= lower_percentiles["Avg_Distances"]) \
+                   & (stats.iloc[:]["Avg_Distances"] <= upper_percentiles["Avg_Distances"])
 
-    lengths_bool = (stats_df.iloc[:]["Assembly_Size"] >= lower_percentiles["Total_Length"]) \
-                   & (stats_df.iloc[:]["Assembly_Size"] <= upper_percentiles["Total_Length"])
+    lengths_bool = (stats.iloc[:]["Assembly_Size"] >= lower_percentiles["Total_Length"]) \
+                   & (stats.iloc[:]["Assembly_Size"] <= upper_percentiles["Total_Length"])
 
     passed = os.listdir(os.path.join(species_dir, passed))
     total = os.listdir(species_dir)
@@ -312,24 +307,24 @@ def bool_df_for_failed(species_dir, stats_df, max_n_count, max_contigs, lower_pe
         log.write("{} passed out of {}".format(len(passed), len(total)))
 
 
-  # for i in stats_df.index:
-  #     N_Count = stats_df.loc[i, "N_Count"]
-  #     Contigs = stats_df.loc[i, "Contigs"]
-  #     Avg_Distances = stats_df.loc[i, "Avg_Distances"]
-  #     Assembly_Size = stats_df.loc[i, "Total_Length"]
+  # for i in stats.index:
+  #     N_Count = stats.loc[i, "N_Count"]
+  #     Contigs = stats.loc[i, "Contigs"]
+  #     Avg_Distances = stats.loc[i, "Avg_Distances"]
+  #     Assembly_Size = stats.loc[i, "Total_Length"]
 
   #     if N_Count > max_n_count:
-  #         stats_df.loc[i, "N_Count"] = "*{}*".format(stats_df.loc[i, "N_Count"])
+  #         stats.loc[i, "N_Count"] = "*{}*".format(stats.loc[i, "N_Count"])
   #     if Contigs > max_contigs:
-  #         stats_df.loc[i, "Contigs"] = "*{}*".format(stats_df.loc[i, "Contigs"])
+  #         stats.loc[i, "Contigs"] = "*{}*".format(stats.loc[i, "Contigs"])
   #     if Avg_Distances <= lower_percentiles["Avg_Distances"] or Avg_Distances >= upper_percentiles["Avg_Distances"]:
-  #         stats_df.loc[i, "Avg_Distances"] = "*{}*".format(stats_df.loc[i, "Avg_Distances"])
+  #         stats.loc[i, "Avg_Distances"] = "*{}*".format(stats.loc[i, "Avg_Distances"])
   #     if Assembly_Size <= lower_percentiles["Total_Length"] or Total_Length >= upper_percentiles["Total_Length"]:
-  #         stats_df.loc[i, "Assembly_Size"] = "*{}*".format(stats_df.loc[i, "Total_Length"])
+  #         stats.loc[i, "Assembly_Size"] = "*{}*".format(stats.loc[i, "Total_Length"])
 
     bool_df = pd.concat([lengths_bool, n_count_bool, contigs_bool, distances_bool], axis=1)
     bool_df.to_csv(os.path.join(species_dir, "failed_tf.csv"))
-    stats_df.to_csv(os.path.join(species_dir, "failed.csv"))
+    stats.to_csv(os.path.join(species_dir, "failed.csv"))
 
 def make_passed_dir(species_dir):
     
@@ -359,33 +354,35 @@ def Main():
             options are `stds`, `med_ads`, and `mads`", type=str, default="med_ads")
     args = parser.parse_args()
 
-    species_dir = args.fasta_dir
+    species_dir = args.species_dir
+
+    max_ns = args.max_n_count
+    multiplier = args.multiplier
 
     if args.from_list:
         for name in args.from_list:
             species_dir = os.path.join(species_dir, name)
             distance_matrix = os.path.join(species_dir, "distance_matrix.csv")
             mash(species_dir)
-            stats_df = generate_fasta_stats(species_dir, distance_matrix)
-            passed_df = assess_stats_df(species_dir, stats_df, args.max_n_count, args.max_contigs, args.lower, args.upper, args.multiplier, args.deviation_type)
+            stats = generate_fasta_stats(species_dir, distance_matrix)
+            passed_df = assess_stats(species_dir, stats, args.max_n_count, args.max_contigs, args.lower, args.upper, args.multiplier, args.deviation_type)
             passed_dir = make_passed_dir(species_dir)
             generate_links_to_passed(passed_df, passed_dir, species_dir)
     else:
         for name in os.listdir(species_dir):
             species_dir = os.path.join(species_dir, name)
             if os.path.isdir(species_dir):
-                # pass if there are <= 5 FASTA's
-                contents = os.listdir(species_dir)
+                contents = os.listdir(species_dir) # pass if there are <= 5 FASTA's
                 if len(contents) <= 5:
                     continue
                 else:
                     clean_up(species_dir)
                     distance_matrix = mash(species_dir)
-                    stats_df = generate_fasta_stats(species_dir, distance_matrix)
-                    filter_med_ad(species_dir, stats_df)
-                    filter_med_ad(species_dir, stats_df, multiplier=2)
-                    filter_med_ad(species_dir, stats_df, multiplier=2.5)
-                  # passed_df = assess_stats_df(species_dir, stats_df, args.max_n_count, args.max_contigs, args.lower, args.upper, args.multiplier, args.deviation_type)
+                    stats = generate_fasta_stats(species_dir, distance_matrix)
+                    filter_med_ad(species_dir, stats, multiplier)
+                  # filter_med_ad(species_dir, max_ns, stats, multiplier=2)
+                  # filter_med_ad(species_dir, max_ns, stats, multiplier=2.5)
+                  # passed_df = assess_stats(species_dir, stats, args.max_n_count, args.max_contigs, args.lower, args.upper, args.multiplier, args.deviation_type)
                   # passed_dir = make_passed_dir(species_dir)
                   # generate_links_to_passed(passed_df, passed_dir, species_dir)
 
