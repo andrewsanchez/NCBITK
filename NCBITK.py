@@ -428,7 +428,9 @@ def Main():
             rename_target = os.path.join(renamed_dir, args.rename_target)
             rename_fastas.rename(rename_target, assembly_summary_df)
         else:
-            rename_fastas.rename(renamed_dir, assembly_summary_df)
+            complete_species_list = ftp_complete_species_list(local_mirror)
+            get_accessions_in_latest_dirs(local_mirror, complete_species_list)
+            mk_dir_structure(local_mirror, assembly_summary_df)
     else:
         fasta_list = ftp_paths_from_assembly_summary(local_mirror, assembly_summary_df)
         rsync_latest_fastas_from_assembly_summary(local_mirror, fasta_list)
