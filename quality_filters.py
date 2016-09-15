@@ -7,31 +7,31 @@ import pandas as pd
 from Bio import SeqIO
 from re import findall
 
-def clean_up(species_dir):
-    sketch_file = os.path.join(species_dir, "all.msh")
-    distance_matrix = os.path.join(species_dir, "distance_matrix.csv")
-    filter_log = os.path.join(species_dir, "filter_log.txt")
+def clean_up(FASTA_dir):
+    sketch_file = os.path.join(FASTA_dir, "all.msh")
+    distance_matrix = os.path.join(FASTA_dir, "distance_matrix.csv")
+    filter_log = os.path.join(FASTA_dir, "filter_log.txt")
 
     files = [sketch_file, distance_matrix, filter_log]
     for f in files:
         if os.path.isfile(f):
             os.remove(f)
 
-def mash(species_dir):
+def mash(FASTA_dir):
     mash="/home/asanchez/local/bin/mash-Linux64-v1.1/mash"
-    sketch_file = os.path.join(species_dir, "all.msh")
-    all_fastas = os.path.join(species_dir, "*.fasta")
-    distance_matrix = os.path.join(species_dir, "distance_matrix.csv")
+    sketch_file = os.path.join(FASTA_dir, "all.msh")
+    all_fastas = os.path.join(FASTA_dir, "*.fasta")
+    distance_matrix = os.path.join(FASTA_dir, "distance_matrix.csv")
     sketch_command = "{} sketch -o {} {}".format(mash, sketch_file, all_fastas)
     distance_command = "{} dist -p 4 -t {} {} > {}".format(mash, sketch_file, all_fastas, distance_matrix)
     Popen(sketch_command, shell="True").wait()
     Popen(distance_command, shell="True").wait()
     distance_matrix = pd.read_csv(distance_matrix, index_col=0, delimiter="\t")
-    clean_up_matrix(species_dir, distance_matrix)
+    clean_up_matrix(FASTA_dir, distance_matrix)
 
     return distance_matrix
 
-def clean_up_matrix(species_dir, distance_matrix):
+def clean_up_matrix(FASTA_dir, distance_matrix):
 
     """
     Set indices and headers to the accession ID's
@@ -44,9 +44,9 @@ def clean_up_matrix(species_dir, distance_matrix):
 
     distance_matrix.index = new_index
     distance_matrix.columns = new_index
-    distance_matrix.to_csv(os.path.join(species_dir, "distance_matrix.csv"), sep="\t")
+    distance_matrix.to_csv(os.path.join(FASTA_dir, "distance_matrix.csv"), sep="\t")
 
-def generate_fasta_stats(species_dir, distance_matrix):
+def generate_fasta_stats(FASTA_dir, distance_matrix):
 
     med_ad_distances = {}
     for i in distance_matrix:
@@ -54,7 +54,7 @@ def generate_fasta_stats(species_dir, distance_matrix):
 
     med_ad_distances = pd.Series(med_ad_distances)
 
-    for root, dirs, files, in os.walk(species_dir):
+    for root, dirs, files, in os.walk(FASTA_dir):
         file_names = []
         contig_totals = []
         assembly_sizes = []
@@ -72,7 +72,7 @@ def generate_fasta_stats(species_dir, distance_matrix):
                     contigs = [ seq.seq for seq in SeqIO.parse(fasta, "fasta") ]
                 except UnicodeDecodeError:
                     print("{} threw UnicodeDecodeError".format(f))
-                    with open(os.path.join(species_dir, "filter_log.txt"), "a") as log:
+                    with open(os.path.join(FASTA_dir, "filter_log.txt"), "a") as log:
                         log.write("{} threw UnicodeDecodeError\n".format(f))
 
                 # Append the total number of contigs to contig_totals
@@ -97,210 +97,67 @@ def generate_fasta_stats(species_dir, distance_matrix):
 
         return stats
 
-def filter_med_ad(species_dir, stats, multiplier, max_n_count):
+def filter_med_ad(FASTA_dir, stats, multiplier, max_n_count):
 
+    # Create new log files and remove old ones
     passed_log = "passed_{}.txt".format(multiplier)
-    passed_log = os.path.join(species_dir, passed_log)
+    passed_log = os.path.join(FASTA_dir, passed_log)
     failed_log = "failed_{}.txt".format(multiplier)
-    failed_log = os.path.join(species_dir, failed_log)
+    failed_log = os.path.join(FASTA_dir, failed_log)
     files = [passed_log, failed_log]
     for f in files:
         if os.path.isfile(f):
             os.remove(f)
 
+    # Filter based on N's first
+    passed_I = stats[stats["N_Count"] <= max_n_count ]
     failed_df = pd.DataFrame(index=stats.index, columns=stats.columns)
-    passed = stats[stats["N_Count"] <= max_n_count ] # Filter based on N's first
-    failed_n = [i for i in stats.index if i not in passed.index]
-    for i in failed_n:
-        failed_df["N_Count"][i] = stats["N_Count"][i]
-    filter_contigs(stats, passed, multiplier, failed_df, failed_log) # Deal with contigs separately
+    for i in stats.index:
+        if i not in passed_I.index:
+            failed_df["N_Count"][i] = stats["N_Count"][i]
+
+    # Deal with contigs separately
+    passed_II = filter_contigs(stats, passed_I, multiplier, failed_df, failed_log)
 
     axes = ["Assembly_Size", "MASH"]
     for axis in axes:
-        before = passed.index
-        med_ad = abs(passed[axis] - passed[axis].median()).mean()# Median absolute deviation
+        med_ad = abs(passed_II[axis] - passed_II[axis].median()).mean()# Median absolute deviation
         deviation_reference = med_ad * multiplier
-        passed = passed[abs(passed[axis] - passed[axis].median()) <= deviation_reference]
-        failed = [i for i in before if i not in passed.index]
-        for i in failed:
-            failed_df[axis][i] = stats[axis][i]
+        passed_III = passed_II[abs(passed_II[axis] - passed_II[axis].median()) <= deviation_reference]
+        for i in passed_II.index:
+            if i not in passed_III.index:
+                failed_df[axis][i] = stats[axis][i]
+
     failed_df.dropna(axis=0, how="all", inplace=True)
     failed_df.fillna(value="N/A", inplace=True)
     failed_df.to_csv(failed_log, header=True)
-    passed.to_csv(passed_log, header=True)
+    passed_III.to_csv(passed_log, header=True)
 
-def filter_contigs(stats, passed, multiplier, failed_df, failed_log):
+def filter_contigs(stats, passed_I, multiplier, failed_df, failed_log):
 
-    contigs = passed["Contigs"]
+    contigs = passed_I["Contigs"]
     contigs = contigs[contigs > 10] # Genomes with < 10 contigs automatically pass.
     contigs_lower = contigs[contigs < 10] # Save genomes with < 10 contigs to add them back in later.
-    contigs_med_ad = abs(contigs - contigs.median()).mean()# Median absolute deviation
+    contigs_med_ad = abs(contigs - contigs.median()).mean() # Median absolute deviation
     contigs_deviation_reference = contigs_med_ad * multiplier
     # should this be <= contigs_deviation_reference] OR < contigs.median() ?
+    # in order to avoid filtering genomes that have too few contigs?
     contigs = contigs[abs(contigs - contigs.median()) <= contigs_deviation_reference]
     contigs = pd.concat([contigs, contigs_lower])
-    failed_contigs = [i for i in passed.index if i not in contigs.index]
+    failed_contigs = [i for i in passed_I.index if i not in contigs.index]
 
-    for i in failed_contigs:
-        passed.drop(i, inplace=True, errors="ignore") # Update the passed DataFrame
-        failed_df["Contigs"][i] = stats["Contigs"][i]
+    for i in passed_I.index:
+        if len(contigs) == len(passed_I):
+            passed_II = passed_I
+        elif i not in contigs.index:
+            passed_II = passed_I.drop(i) # Update the passed_I DataFrame
+            failed_df["Contigs"][i] = stats["Contigs"][i]
 
-def assess_failed(stats, failed_ids, failed_log, passed, axes, multiplier):
+    return passed_II
 
-    with open(failed_log, "a") as log:
-        log.write("Failed:  {} out of {} = {:4.2f}%\n".format(len(failed_ids), len(stats), len(failed_ids)/len(stats)*100))
-        for axis in axes:
-            med_ad = abs(passed[axis] - passed[axis].median()).mean()# Median absolute deviation
-            deviation_reference = med_ad * multiplier
-            for i in failed:
-                value = passed.ix[i][axis]
-                if not abs(value - passed[axis].median()) <= deviation_reference:
-                    accession = "_".join(i.split("_")[:2])
-                    log.write("{} {}:  {} > {}\n".format(accession, axis, value, deviation_reference))
+def generate_links_to_passed(passed_df, passed_dir, FASTA_dir):
 
-def assess_stats(species_dir, stats, max_n_count, max_contigs, lower_percentile, upper_percentile, multiplier=1.5, deviation="med_ads"):
-
-    log_file = "{}_filter_log.txt".format(deviation)
-    filter_log = os.path.join(species_dir, log_file)
-    if os.path.isfile(filter_log):
-        os.remove(filter_log)
-
-    axes = ["Assembly_Size", "Contigs"]
-    for axis in axes:
-        if axis == "Contigs":
-            passed_df = stats[stats["Contigs"] >= 10 ]
-            passed_df = stats[stats["N_Count"] <= max_n_count ] # Filter based on N_Count first
-        else:
-            passed_df = stats[stats["N_Count"] <= max_n_count ] # Filter based on N_Count first
-
-    # Get the absolute difference between mean/median, mean/max, and mean/min.
-    # Maybe get these values, not just for median, max, and min, but for the range of values
-    # that fall within 5% of the median, max, and min?  Then take the average of those?
-    median_mean_ad = abs(passed_df.median()[axis] - passed_df.mean()[axis]) 
-    median_max_ad = abs(passed_df.median()[axis] - passed_df.max()[axis])
-    median_min_ad = abs(passed_df.median()[axis] - passed_df.min()[axis])
-    # The average or STD between the above three measures might be helpful.
-
-    def calculate_homogeneity(axis, passed_df, deviation="med_ads"):
-        
-        """
-        Determine whether or not the dataset is homogeneous, 
-        i.e. the mean, median, max, and min values
-        are within `std * multiplier` of each other.
-        Axis is the column of the DataFrame you wish to check.
-        """
-
-        # Check if absolute differences are <= deviation * multiplier
-        # Calculate reference points for "normal" deviation checks
-        # Peform these checks for the range of values referenced above?
-        def create_log(check_median, check_max, check_min, homogeneity_rating):
-            with open(filter_log, "a") as log:
-                log.write("Results for {} using {} as the deviation reference point:\n".format(axis, deviation))
-                log.write("abs(median - mean) = {}\n".format(median_mean_ad))
-                log.write("abs(median - max) = {}\n".format(median_max_ad))
-                log.write("abs(median - min) = {}\n".format(median_min_ad))
-                log.write("{} * multiplier:\n".format(deviation))
-                if deviation == "std":
-                    log.write("{} * {} = {}\n".format(std, multiplier, stds))
-                elif deviation == "med_ad":
-                    log.write("{} * {} = {}\n".format(med_ad, multiplier, med_ads))
-                elif deviation == "mad":
-                    log.write("{} * {} = {}\n".format(mad, multiplier, mads))
-                log.write("1 if abs(x-y) <= deviation * multiplier, 0 zero if not.\n")
-                log.write("Median results:  {}\n".format(check_median))
-                log.write("Max results:  {}\n".format(check_max))
-                log.write("Min results:  {}\n".format(check_min))
-                log.write("Homogeneity rating:  {}\n".format(homogeneity_rating))
-                log.write("{} total FASTA's".format(len(stats)))
-
-        def med_max_min_checks():
-            check_median = int(median_mean_ad <= (deviation_reference))
-            check_max = int(median_max_ad <= (deviation_reference))
-            check_min = int(median_min_ad <= (deviation_reference))
-            homogeneity_rating = check_median + check_max + check_min
-            create_log(check_median, check_max, check_min, homogeneity_rating)
-
-        if deviation == "stds":
-            std = passed_df.std()[axis] #  Standard deviation
-            deviation_reference = std * multiplier
-            med_max_min_checks()
-        elif deviation == "med_ads":
-            med_ad = abs(passed_df - passed_df.median()).mean()# Median absolute deviation
-            deviation_reference = med_ad[axis] * multiplier
-            med_max_min_checks()
-        elif deviation == "mads":
-            mad = abs(stats - stats.mean()).mean()# Mean absolute deviation
-            deviation_reference = mad[axis] * multiplier
-            med_max_min_checks()
-
-            # If this is used: `passed = passed_df[abs(passed_df[axis] - med_ad) <= deviation_reference]`
-            # The code below becomes completely unecessary
-
-        if axis == "Contigs":
-            if not check_max:
-                log.write("Filtering FASTA's above the upper percentile")
-                return "upper"
-            elif check_max:
-                log.write("Dataset is homogenous")
-                return True
-        else:
-            if check_max and not check_min:
-                if homogeneity_rating == 2:
-                    log.write("Filtering FASTA's below the lower percentile")
-                    return "lower"
-                else:
-                    log.write("Filtering FASTA's outside the upper and lower percentiles")
-                    return False
-            elif check_min and not check_max:
-                if homogeneity_rating == 2:
-                    log.write("Filtering FASTA's above the upper")
-                    return "upper"
-                else:
-                    log.write("Filtering FASTA's outside the upper and lower percentiles")
-                    return False
-            elif homogeneity_rating == 3:
-                log.write("Dataset is homogenous")
-                return True
-
-        log.write("################################################################################")
-
-    failed_N_count_df = stats[stats["N_Count"] >= max_n_count ] # Initialize the failed DataFrame
-
-    # Calculate percentiles
-    quantiles_stats = passed_df.quantile([lower_percentile, upper_percentile])
-    lower_percentiles = quantiles_stats.loc[lower_percentile]
-    upper_percentiles = quantiles_stats.loc[upper_percentile]
-
-    rating = calculate_homogeneity(axis, passed_df)
-    if not rating:
-        passed_df = passed_df[(passed_df[axis] > lower_percentiles[axis]) & (passed_df[axis] < upper_percentiles[axis])]
-        failed_lower_df = passed_df[(passed_df[axis] <= lower_percentiles[axis])]
-        failed_upper_df = passed_df[(passed_df[axis] >= upper_percentiles[axis])]
-    elif rating == "lower":
-        # the data are homogenous at the lower end but not the upper end
-        # filter out the upper end
-        passed_df = passed_df[(passed_df[axis] < upper_percentiles[axis])]
-        failed_upper_df = passed_df[(passed_df[axis] >= upper_percentiles[axis])]
-    elif rating == "upper":
-        # the data are homogenous at the upper end but not the lower end
-        # filter out the lower end
-        passed_df = passed_df[(passed_df[axis] > lower_percentiles[axis])]
-        failed_lower_df = passed_df[(passed_df[axis] <= lower_percentiles[axis])]
-    elif rating:
-        """
-        if rating is True, filtering will only occur based on N Count
-        """
-        pass
-
-    frames = [failed_N_count_df, failed_lower_df, failed_upper_df]
-    failed_df = pd.concat(frames)
-    failed_df.to_csv(os.path.join(species_dir, "failed.csv"))
-
-    return passed_df
-
-def generate_links_to_passed(passed_df, passed_dir, species_dir):
-
-    filter_log = os.path.join(species_dir, "filter_log.txt")
+    filter_log = os.path.join(FASTA_dir, "filter_log.txt")
     with open(filter_log, "a") as log:
         log.write("{} FASTA's passed".format(len(passed_df)))
 
@@ -310,7 +167,17 @@ def generate_links_to_passed(passed_df, passed_dir, species_dir):
         print("Linking to {}".format(dst))
         os.link(source, dst)
 
-def bool_df_for_failed(species_dir, stats, max_n_count, max_contigs, lower_percentile, upper_percentile):
+def make_passed_dir(FASTA_dir):
+    
+    passed_dir = os.path.join(FASTA_dir, "passed")
+    if os.path.isdir(passed_dir):
+        rmtree(passed_dir)
+    if not os.path.isdir(passed_dir):
+        os.mkdir(passed_dir)
+
+    return passed_dir
+    
+def bool_df_for_failed(FASTA_dir, stats, max_n_count, max_contigs, lower_percentile, upper_percentile):
 
     quantiles_stats = stats.quantile([lower_percentile, upper_percentile])
     lower_percentiles = quantiles_stats.loc[lower_percentile]
@@ -325,9 +192,9 @@ def bool_df_for_failed(species_dir, stats, max_n_count, max_contigs, lower_perce
     lengths_bool = (stats.iloc[:]["Assembly_Size"] >= lower_percentiles["Total_Length"]) \
                    & (stats.iloc[:]["Assembly_Size"] <= upper_percentiles["Total_Length"])
 
-    passed = os.listdir(os.path.join(species_dir, passed))
-    total = os.listdir(species_dir)
-    filter_log = os.path.join(species_dir, "filter_log.txt")
+    passed = os.listdir(os.path.join(FASTA_dir, passed))
+    total = os.listdir(FASTA_dir)
+    filter_log = os.path.join(FASTA_dir, "filter_log.txt")
     with open(filter_log, "a") as log:
         log.write("{} passed out of {}".format(len(passed), len(total)))
 
@@ -348,24 +215,16 @@ def bool_df_for_failed(species_dir, stats, max_n_count, max_contigs, lower_perce
   #         stats.loc[i, "Assembly_Size"] = "*{}*".format(stats.loc[i, "Total_Length"])
 
     bool_df = pd.concat([lengths_bool, n_count_bool, contigs_bool, distances_bool], axis=1)
-    bool_df.to_csv(os.path.join(species_dir, "failed_tf.csv"))
-    stats.to_csv(os.path.join(species_dir, "failed.csv"))
+    bool_df.to_csv(os.path.join(FASTA_dir, "failed_tf.csv"))
+    stats.to_csv(os.path.join(FASTA_dir, "failed.csv"))
 
-def make_passed_dir(species_dir):
-    
-    passed_dir = os.path.join(species_dir, "passed")
-    if os.path.isdir(passed_dir):
-        rmtree(passed_dir)
-    if not os.path.isdir(passed_dir):
-        os.mkdir(passed_dir)
-
-    return passed_dir
-    
 def Main():
     parser = argparse.ArgumentParser(description = "Assess the integrity of your FASTA collection")
-    parser.add_argument("species_dir", help = "directory containing your FASTA files")
-    parser.add_argument("-d", "--directory", help = "Specifies that `species_dir` is a parent directory with \
-            subdirectories for each species", action="store_true")
+    parser.add_argument("FASTA_dir", help = "directory containing your FASTA files", nargs="+")
+    parser.add_argument("-d", "--directories", help = "The complete path to one or more directories containing\
+            FASTA's you want to run the filters on.", action="store_true")
+    parser.add_argument("-p", "--parent_dir", help = "The parent directory containing subdirectories with FASTA's for\
+            each of the collections you want to run the filters on.")
     parser.add_argument("--from_list", help = "Specify a list of one more more directories to fun filters on.", nargs="+")
     parser.add_argument("-f", "--file", help = "Specify a file containing one species directory per line.", action="store_true")
     parser.add_argument("-n", "--max_n_count", help = "Maximum number of N's acceptable", type=int, default=100)
@@ -379,34 +238,32 @@ def Main():
             options are `stds`, `med_ads`, and `mads`", type=str, default="med_ads")
     args = parser.parse_args()
 
-    species_dir = args.species_dir
-
     max_ns = args.max_n_count
 
-    if args.from_list:
-        for name in args.from_list:
-            species_dir = os.path.join(species_dir, name)
-            distance_matrix = os.path.join(species_dir, "distance_matrix.csv")
-            mash(species_dir)
-            stats = generate_fasta_stats(species_dir, distance_matrix)
-            passed_df = assess_stats(species_dir, stats, args.max_n_count, args.max_contigs, args.lower, args.upper, args.multiplier, args.deviation_type)
-            passed_dir = make_passed_dir(species_dir)
-            generate_links_to_passed(passed_df, passed_dir, species_dir)
+    if args.directories:
+        for name in args.FASTA_dir:
+            FASTA_dir = name
+            if len(os.listdir(FASTA_dir)) <= 5: # pass if there are <= 5 FASTA's
+                continue
+            clean_up(FASTA_dir)
+            distance_matrix = mash(FASTA_dir)
+            stats = generate_fasta_stats(FASTA_dir, distance_matrix)
+            for num in [2, 2.5, 3, 3.5]:
+                filter_med_ad(FASTA_dir, stats, multiplier=num, max_n_count=100)
     else:
-        for name in os.listdir(species_dir):
-            species_dir = os.path.join(species_dir, name)
-            if os.path.isdir(species_dir):
-                contents = os.listdir(species_dir) # pass if there are <= 5 FASTA's
-                if len(contents) <= 5:
+        root = args.FASTA_dir[0]
+        for name in os.listdir(root):
+            FASTA_dir = os.path.join(root, name)
+            if os.path.isdir(FASTA_dir):
+                if len(os.listdir(FASTA_dir)) <= 5:
                     continue
                 else:
-                    clean_up(species_dir)
-                    distance_matrix = mash(species_dir)
-                    stats = generate_fasta_stats(species_dir, distance_matrix)
-                    for num in [2.5]:
-                        filter_med_ad(species_dir, stats, multiplier=num, max_n_count=100)
-                  # passed_dir = make_passed_dir(species_dir)
-                  # passed_df = assess_stats(species_dir, stats, args.max_n_count, args.max_contigs, args.lower, args.upper, args.multiplier, args.deviation_type)
-                  # generate_links_to_passed(passed_df, passed_dir, species_dir)
+                    clean_up(FASTA_dir)
+                    distance_matrix = mash(FASTA_dir)
+                    stats = generate_fasta_stats(FASTA_dir, distance_matrix)
+                    for num in [2, 2.5, 3, 3.5]:
+                        filter_med_ad(FASTA_dir, stats, multiplier=num, max_n_count=100)
+                  # passed_dir = make_passed_dir(FASTA_dir)
+                  # generate_links_to_passed(passed_df, passed_dir, FASTA_dir)
 
 Main()
