@@ -17,13 +17,12 @@ def clean_up(FASTA_dir):
         if os.path.isfile(f):
             os.remove(f)
 
-def mash(FASTA_dir):
-    mash="/home/asanchez/local/bin/mash-Linux64-v1.1/mash"
+def mash(FASTA_dir, mash_exe):
     sketch_file = os.path.join(FASTA_dir, "all.msh")
     all_fastas = os.path.join(FASTA_dir, "*.fasta")
     distance_matrix = os.path.join(FASTA_dir, "distance_matrix.csv")
-    sketch_command = "{} sketch -o {} {}".format(mash, sketch_file, all_fastas)
-    distance_command = "{} dist -p 4 -t {} {} > {}".format(mash, sketch_file, all_fastas, distance_matrix)
+    sketch_command = "{} sketch -o {} {}".format(mash_exe, sketch_file, all_fastas)
+    distance_command = "{} dist -p 4 -t {} {} > {}".format(mash_exe, sketch_file, all_fastas, distance_matrix)
     Popen(sketch_command, shell="True").wait()
     Popen(distance_command, shell="True").wait()
     distance_matrix = pd.read_csv(distance_matrix, index_col=0, delimiter="\t")
@@ -48,11 +47,6 @@ def clean_up_matrix(FASTA_dir, distance_matrix):
 
 def generate_fasta_stats(FASTA_dir, distance_matrix):
 
-    med_ad_distances = {}
-    for i in distance_matrix:
-        med_ad_distances[i] = abs(distance_matrix[i] - distance_matrix[i].median()).mean()
-
-    med_ad_distances = pd.Series(med_ad_distances)
 
     for root, dirs, files, in os.walk(FASTA_dir):
         file_names = []
@@ -84,15 +78,14 @@ def generate_fasta_stats(FASTA_dir, distance_matrix):
                 assembly_sizes.append(sum(assembly_size))
 
                 # Read the N_Count for each contig into a list
-              # N_Count = [ int(str(seq.upper()).count("N")) for seq in contigs ]
-              # N_Count = [sum(1 for N in str(seq.upper()))for seq in contigs]
                 N_Count = [len(findall("[^ATCG]", str(seq))) for seq in contigs]
                 # Append the total N_Count to n_counts
                 n_counts.append(sum(N_Count))
 
         SeqDataSet = list(zip(assembly_sizes, contig_totals, n_counts))
-        stats = pd.DataFrame(data = SeqDataSet, index=file_names, columns=["Assembly_Size", "Contigs", "N_Count"], dtype="float64")
-        stats["MASH"] = med_ad_distances
+        stats = pd.DataFrame(data=SeqDataSet, index=file_names, columns=["Assembly_Size", "Contigs", "N_Count"], dtype="float64")
+        mean_distances = distance_matrix.mean()
+        stats["MASH"] = mean_distances
         stats.to_csv(os.path.join(root, "stats.csv"), index_label="Accession")
 
         return stats
@@ -104,7 +97,9 @@ def filter_med_ad(FASTA_dir, stats, multiplier, max_n_count):
     passed_log = os.path.join(FASTA_dir, passed_log)
     failed_log = "failed_{}.txt".format(multiplier)
     failed_log = os.path.join(FASTA_dir, failed_log)
-    files = [passed_log, failed_log]
+    sanity_check = "sanity_check_{}".format(multiplier)
+    sanity_check = os.path.join(FASTA_dir, sanity_check)
+    files = [passed_log, failed_log, sanity_check]
     for f in files:
         if os.path.isfile(f):
             os.remove(f)
@@ -116,42 +111,71 @@ def filter_med_ad(FASTA_dir, stats, multiplier, max_n_count):
         if i not in passed_I.index:
             failed_df["N_Count"][i] = stats["N_Count"][i]
 
-    # Deal with contigs separately
-    passed_II = filter_contigs(stats, passed_I, multiplier, failed_df, failed_log)
+    with open(sanity_check, "a") as sanity:
+        sanity.write("Total genomes:  {}\n".format(len(stats)))
+        sanity.write("After filtering N's - Passed:  {}\n".format(len(passed_I)))
+        sanity.write("After filtering N's - Failed:  {}\n".format(len(failed_df.dropna(axis=0, how="all"))))
+        sanity.write("Passed + Failed = {}\n".format(len(passed_I) + len(failed_df.dropna(axis=0, how="all"))))
 
-    axes = ["Assembly_Size", "MASH"]
-    for axis in axes:
-        med_ad = abs(passed_II[axis] - passed_II[axis].median()).mean()# Median absolute deviation
-        deviation_reference = med_ad * multiplier
-        passed_III = passed_II[abs(passed_II[axis] - passed_II[axis].median()) <= deviation_reference]
-        for i in passed_II.index:
-            if i not in passed_III.index:
-                failed_df[axis][i] = stats[axis][i]
+    # Filter using special function for contigs
+    passed_II = filter_contigs(stats, passed_I, multiplier, failed_df, failed_log, sanity_check)
+
+    Assembly_Size_med_ad = abs(passed_II["Assembly_Size"] - passed_II["Assembly_Size"].median()).mean()# Median absolute deviation
+    deviation_reference = Assembly_Size_med_ad * multiplier
+    passed_III = passed_II[abs(passed_II["Assembly_Size"] - passed_II["Assembly_Size"].median()) <= deviation_reference]
+    for i in passed_II.index:
+        if i not in passed_III.index:
+            failed_df["Assembly_Size"][i] = stats["Assembly_Size"][i]
+
+    with open(sanity_check, "a") as sanity:
+        sanity.write("Total genomes:  {}\n".format(len(stats)))
+        sanity.write("After filtering Assembly_Size - Passed:  {}\n".format(len(passed_III)))
+        sanity.write("After filtering Assembly_Size - Failed:  {}\n".format(len(failed_df.dropna(axis=0, how="all"))))
+        sanity.write("Passed + Failed = {}\n".format(len(passed_III) + len(failed_df.dropna(axis=0, how="all"))))
+
+    MASH_med_ad = abs(passed_III["MASH"] - passed_III["MASH"].median()).mean()# Median absolute deviation
+    deviation_reference = MASH_med_ad * multiplier
+    passed_IV = passed_III[abs(passed_III["MASH"] - passed_III["MASH"].median()) <= deviation_reference]
+    for i in passed_III.index:
+        if i not in passed_IV.index:
+            failed_df["MASH"][i] = stats["MASH"][i]
+
+    with open(sanity_check, "a") as sanity:
+        sanity.write("Total genomes:  {}\n".format(len(stats)))
+        sanity.write("After filtering MASH - Passed:  {}\n".format(len(passed_IV)))
+        sanity.write("After filtering MASH - Failed:  {}\n".format(len(failed_df.dropna(axis=0, how="all"))))
+        sanity.write("Passed + Failed = {}\n".format(len(passed_IV) + len(failed_df.dropna(axis=0, how="all"))))
 
     failed_df.dropna(axis=0, how="all", inplace=True)
     failed_df.fillna(value="N/A", inplace=True)
     failed_df.to_csv(failed_log, header=True)
-    passed_III.to_csv(passed_log, header=True)
+    passed_IV.to_csv(passed_log, header=True)
 
-def filter_contigs(stats, passed_I, multiplier, failed_df, failed_log):
+def filter_contigs(stats, passed_I, multiplier, failed_df, failed_log, sanity_check):
 
     contigs = passed_I["Contigs"]
-    contigs = contigs[contigs > 10] # Genomes with < 10 contigs automatically pass.
     contigs_lower = contigs[contigs < 10] # Save genomes with < 10 contigs to add them back in later.
+    contigs = contigs[contigs > 10] # Only look at genomes with > 10 contigs to avoid throwing off the MAD
     contigs_med_ad = abs(contigs - contigs.median()).mean() # Median absolute deviation
     contigs_deviation_reference = contigs_med_ad * multiplier
-    # should this be <= contigs_deviation_reference] OR < contigs.median() ?
-    # in order to avoid filtering genomes that have too few contigs?
     contigs = contigs[abs(contigs - contigs.median()) <= contigs_deviation_reference]
     contigs = pd.concat([contigs, contigs_lower])
-    failed_contigs = [i for i in passed_I.index if i not in contigs.index]
 
-    for i in passed_I.index:
-        if len(contigs) == len(passed_I):
-            passed_II = passed_I
-        elif i not in contigs.index:
-            passed_II = passed_I.drop(i) # Update the passed_I DataFrame
+    # Avoid returning empty DataFrame when no genomes are removed above
+    if len(contigs) == len(passed_I):
+        passed_II = passed_I
+    else:
+        failed_contigs = [i for i in passed_I.index if i not in contigs.index]
+        passed_II = passed_I.drop(failed_contigs)
+
+        for i in failed_contigs:
             failed_df["Contigs"][i] = stats["Contigs"][i]
+
+    with open(sanity_check, "a") as sanity:
+        sanity.write("Total genomes:  {}\n".format(len(stats)))
+        sanity.write("After filtering Contigs - Passed:  {}\n".format(len(passed_II)))
+        sanity.write("After filtering Contigs - Failed:  {}\n".format(len(failed_df.dropna(axis=0, how="all"))))
+        sanity.write("Passed + Failed = {}\n".format(len(passed_II) + len(failed_df.dropna(axis=0, how="all"))))
 
     return passed_II
 
@@ -223,6 +247,7 @@ def Main():
     parser.add_argument("FASTA_dir", help = "directory containing your FASTA files", nargs="+")
     parser.add_argument("-d", "--directories", help = "The complete path to one or more directories containing\
             FASTA's you want to run the filters on.", action="store_true")
+    parser.add_argument("-x", "--mash_exe", help = "Path to MASH")
     parser.add_argument("-p", "--parent_dir", help = "The parent directory containing subdirectories with FASTA's for\
             each of the collections you want to run the filters on.")
     parser.add_argument("--from_list", help = "Specify a list of one more more directories to fun filters on.", nargs="+")
@@ -237,8 +262,11 @@ def Main():
     parser.add_argument("--deviation_type", help = "Which measurement to be used for the deviation reference point.\
             options are `stds`, `med_ads`, and `mads`", type=str, default="med_ads")
     args = parser.parse_args()
-
     max_ns = args.max_n_count
+
+    mash_exe = "/common/contrib/bin/mash-Linux64-v1.1/mash"
+    if args.mash_exe:
+        mash_exe = args.mash_exe
 
     if args.directories:
         for name in args.FASTA_dir:
@@ -246,7 +274,7 @@ def Main():
             if len(os.listdir(FASTA_dir)) <= 5: # pass if there are <= 5 FASTA's
                 continue
             clean_up(FASTA_dir)
-            distance_matrix = mash(FASTA_dir)
+            distance_matrix = mash(FASTA_dir, mash_exe)
             stats = generate_fasta_stats(FASTA_dir, distance_matrix)
             for num in [2, 2.5, 3, 3.5]:
                 filter_med_ad(FASTA_dir, stats, multiplier=num, max_n_count=100)
@@ -259,7 +287,7 @@ def Main():
                     continue
                 else:
                     clean_up(FASTA_dir)
-                    distance_matrix = mash(FASTA_dir)
+                    distance_matrix = mash(FASTA_dir, mash_exe)
                     stats = generate_fasta_stats(FASTA_dir, distance_matrix)
                     for num in [2, 2.5, 3, 3.5]:
                         filter_med_ad(FASTA_dir, stats, multiplier=num, max_n_count=100)
