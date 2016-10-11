@@ -1,0 +1,44 @@
+python /common/contrib/tools/NCBITK/quality_filters.py -d test_genomes/genomes/Abiotrophia_defectiva
+python /common/contrib/tools/NCBITK/quality_filters.py -d test_genomes/genomes/Acetobacter_aceti
+python /common/contrib/tools/NCBITK/quality_filters.py -d test_genomes/genomes/Acinetobacter_baumannii
+python /common/contrib/tools/NCBITK/quality_filters.py -d test_genomes/genomes/Acinetobacter_nosocomialis
+python /common/contrib/tools/NCBITK/quality_filters.py -d test_genomes/genomes/Bacillus_anthracis
+python /common/contrib/tools/NCBITK/quality_filters.py -d test_genomes/genomes/Escherichia_coli
+python /common/contrib/tools/NCBITK/quality_filters.py -d test_genomes/mixed_genomes/Acinetobacter_nosocomialis_and_Acetobacter_aceti
+python /common/contrib/tools/NCBITK/quality_filters.py -d test_genomes/mixed_genomes/E_coli_and_anthrax
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+jobs/arrays/qc_commands.txt                                                                                                                 6,1            All
+#!/bin/sh
+
+#SBATCH --job-name=mash_array
+#SBATCH --time=1:00:00
+#SBATCH --workdir=/scratch/aas229
+#SBATCH --array=1-8
+
+dir=$(sed -n "$SLURM_ARRAY_TASK_ID"p jobs/arrays/qc_commands.txt | cut -d" " -f4 | cut -d"/" -f3)
+#SBATCH --output=jobs/output/qc_array_%a_"$dir".out
+
+cmd=$(sed -n "$SLURM_ARRAY_TASK_ID"p jobs/arrays/qc_commands.txt)
+
+module load anaconda/3.latest
+srun echo $cmd
+~
+~
+~
+~
+~
+~
+jobs/slurm_scripts/qc_array.sh                                                                                                              14,14          All
+"jobs/slurm_scripts/qc_array.sh" 14L, 382C written
