@@ -4,36 +4,41 @@ import os, argparse
 import pandas as pd
 from collections import namedtuple
 from subprocess import Popen
-from shutil import rmtree
+from shutil import rmtree, move
 from Bio import SeqIO
 from re import findall
 from link_passed_genomes import make_passed_dir, link_passed_genomes
 
-def clean_up(FASTA_dir):
-    sketch_file = os.path.join(FASTA_dir, "all.msh")
-    distance_matrix = os.path.join(FASTA_dir, "distance_matrix.csv")
-    filter_log = os.path.join(FASTA_dir, "filter_log.txt")
+def clean_up(fasta_dir):
+    sketch_file = os.path.join(fasta_dir, "all.msh")
+    distance_matrix = os.path.join(fasta_dir, "distance_matrix.csv")
+    filter_log = os.path.join(fasta_dir, "filter_log.txt")
+
+    info = os.path.join(fasta_dir, "info")
+    if not os.path.isdir(info):
+        os.mkdir(info)
 
     files = [sketch_file, distance_matrix, filter_log]
     for f in files:
         if os.path.isfile(f):
             os.remove(f)
 
-def mash(FASTA_dir, mash_exe):
-    sketch_file = os.path.join(FASTA_dir, "all.msh")
-    all_fastas = os.path.join(FASTA_dir, "*.fasta")
-    distance_matrix = os.path.join(FASTA_dir, "distance_matrix.csv")
+def mash(fasta_dir, mash_exe):
+    info = os.path.join(fasta_dir, "info")
+    sketch_file = os.path.join(info, "all.msh")
+    all_fastas = os.path.join(fasta_dir, "*.fasta")
+    distance_matrix = os.path.join(info, "distance_matrix.csv")
     sketch_command = "{} sketch -o {} {}".format(mash_exe, sketch_file, all_fastas)
     distance_command = "{} dist -t {} {} > {}".format(mash_exe, sketch_file, all_fastas, distance_matrix)
     #distance_command = "{} dist -p 4 -t {} {} > {}".format(mash_exe, sketch_file, all_fastas, distance_matrix)
     Popen(sketch_command, shell="True").wait()
     Popen(distance_command, shell="True").wait()
     distance_matrix = pd.read_csv(distance_matrix, index_col=0, delimiter="\t")
-    clean_up_matrix(FASTA_dir, distance_matrix)
+    clean_up_matrix(info, distance_matrix)
 
     return distance_matrix
 
-def clean_up_matrix(FASTA_dir, distance_matrix):
+def clean_up_matrix(info, distance_matrix):
 
     """
     Set indices and headers to the accession ID's
@@ -48,11 +53,12 @@ def clean_up_matrix(FASTA_dir, distance_matrix):
 
     distance_matrix.index = new_index
     distance_matrix.columns = new_columns
-    distance_matrix.to_csv(os.path.join(FASTA_dir, "distance_matrix.csv"), sep="\t")
+    distance_matrix.to_csv(os.path.join(info, "distance_matrix.csv"), sep="\t")
 
-def generate_fasta_stats(FASTA_dir, distance_matrix):
+def generate_fasta_stats(fasta_dir, distance_matrix):
 
-    for root, dirs, files, in os.walk(FASTA_dir):
+    info = os.path.join(fasta_dir, "info")
+    for root, dirs, files, in os.walk(fasta_dir):
         file_names = []
         contig_totals = []
         assembly_sizes = []
@@ -70,7 +76,7 @@ def generate_fasta_stats(FASTA_dir, distance_matrix):
                     contigs = [ seq.seq for seq in SeqIO.parse(fasta, "fasta") ]
                 except UnicodeDecodeError:
                     print("{} threw UnicodeDecodeError".format(f))
-                    with open(os.path.join(FASTA_dir, "filter_log.txt"), "a") as log:
+                    with open(os.path.join(info, "filter_log.txt"), "a") as log:
                         log.write("{} threw UnicodeDecodeError\n".format(f))
 
                 # Append the total number of contigs to contig_totals
@@ -90,18 +96,19 @@ def generate_fasta_stats(FASTA_dir, distance_matrix):
         stats = pd.DataFrame(data=SeqDataSet, index=file_names, columns=["N_Count", "Contigs", "Assembly_Size"], dtype="float64")
         mean_distances = distance_matrix.mean()
         stats["MASH"] = mean_distances
-        stats.to_csv(os.path.join(root, "stats.csv"), index_label="Accession")
+        stats.to_csv(os.path.join(info, "stats.csv"), index_label="Accession")
 
         return stats
 
-def filter_med_ad(FASTA_dir, stats, max_n_count, c_range, s_range, m_range):
+def filter_med_ad(fasta_dir, stats, max_n_count, c_range, s_range, m_range):
 
+    info = os.path.join(fasta_dir, "info")
     filter_ranges = "{}_{}_{}".format(c_range, s_range, m_range)
 
     # Create new log files and remove old ones
-    passed_log = os.path.join(FASTA_dir, "passed_{}.csv".format(filter_ranges))
-    failed_log = os.path.join(FASTA_dir, "failed_{}.csv".format(filter_ranges))
-    summary = os.path.join(FASTA_dir, "summary_{}.csv".format(filter_ranges))
+    passed_log = os.path.join(info, "passed_{}.csv".format(filter_ranges))
+    failed_log = os.path.join(info, "failed_{}.csv".format(filter_ranges))
+    summary = os.path.join(info, "summary_{}.csv".format(filter_ranges))
     summary_df = pd.DataFrame()
 
     files = [passed_log, failed_log, summary]
@@ -181,9 +188,9 @@ def filter_med_ad(FASTA_dir, stats, max_n_count, c_range, s_range, m_range):
     passed_final.to_csv(passed_log, header=True)
 
     filter_level = passed_log.split("/")[-1].strip(".csv")
-    passed_dir = os.path.join(FASTA_dir, filter_level)
+    passed_dir = os.path.join(fasta_dir, filter_level)
     make_passed_dir(passed_dir, passed_log)
-    link_passed_genomes(FASTA_dir, passed_dir, passed_log)
+    link_passed_genomes(fasta_dir, passed_dir, passed_log)
 
 def filter_contigs(stats, passed_I, filter_ranges, c_range, failed, summary_df):
 
@@ -220,10 +227,24 @@ def filter_contigs(stats, passed_I, filter_ranges, c_range, failed, summary_df):
     filter_contigs_results = results(passed_II, failed_contigs)
 
     return filter_contigs_results
-    
+
+def assess_fastas(fasta_dir):
+
+    # Check for empty FASTA's and move them before running MASH
+    info = os.path.join(fasta_dir, "info")
+    empty = os.path.join(info, "corrupt_fastas")
+    for f in os.listdir(fasta_dir):
+        if f.endswith("fasta") and os.path.getsize(os.path.join(fasta_dir, f)) == 0:
+            print("{} is empty and will be moved to {} before runing MASH.".format(f, empty))
+            if not os.path.isdir(empty):
+                os.mkdir(empty)
+            src = os.path.join(fasta_dir, f)
+            dst = os.path.join(empty, f)
+            move(src, dst)
+
 def main():
     parser = argparse.ArgumentParser(description = "Assess the integrity of your FASTA collection")
-    parser.add_argument("FASTA_dir", help = "directory containing your FASTA files")
+    parser.add_argument("fasta_dir", help = "directory containing your FASTA files")
     parser.add_argument("-d", "--directories", help = "The complete path to one or more directories containing\
             FASTA's you want to run the filters on.", action="store_true")
     parser.add_argument("-x", "--mash_exe", help = "Path to MASH")
@@ -238,19 +259,20 @@ def main():
     args = parser.parse_args()
 
     def mash_stats_and_filter():
-        clean_up(FASTA_dir)
-        distance_matrix = mash(FASTA_dir, mash_exe)
-        stats = generate_fasta_stats(FASTA_dir, distance_matrix)
-        filter_med_ad(FASTA_dir, stats, max_ns, c_range, s_range, m_range)
+        clean_up(fasta_dir)
+        assess_fastas(fasta_dir)
+        distance_matrix = mash(fasta_dir, mash_exe)
+        stats = generate_fasta_stats(fasta_dir, distance_matrix)
+        filter_med_ad(fasta_dir, stats, max_ns, c_range, s_range, m_range)
 
     def just_filter():
-        stats = os.path.join(FASTA_dir, "stats.csv")
+        stats = os.path.join(os.path.join(fasta_dir, "info"), "stats.csv")
         stats = pd.read_csv(stats, index_col=0)
-        filter_med_ad(FASTA_dir, stats, max_ns, c_range, s_range, m_range)
+        filter_med_ad(fasta_dir, stats, max_ns, c_range, s_range, m_range)
 
     def stats_are_current():
         genomes_in_dir = 0
-        for f in os.listdir(FASTA_dir):
+        for f in os.listdir(fasta_dir):
             if f.endswith("fasta"):
                 genomes_in_dir += 1
         genomes_in_stats = len(stats.index)
@@ -262,7 +284,7 @@ def main():
             return False
 
     mash_exe = "/common/contrib/bin/mash-Linux64-v1.1.1/mash"
-    FASTA_dir = args.FASTA_dir
+    fasta_dir = args.fasta_dir
     max_ns = args.max_n_count 
 
     if args.filter_level:
@@ -274,13 +296,13 @@ def main():
         s_range = args.s_range
         m_range = args.m_range
 
-    if len(os.listdir(FASTA_dir)) <= 5: # pass if there are <= 5 FASTA's
-        print("{} contains less than 5 genomes.".format(FASTA_dir))
-    elif os.path.isfile(os.path.join(FASTA_dir,"stats.csv")):
-        stats = os.path.join(FASTA_dir, "stats.csv")
+    if len(os.listdir(fasta_dir)) <= 5: # pass if there are <= 5 FASTA's
+        print("{} contains less than 5 genomes.".format(fasta_dir))
+    elif os.path.isfile(os.path.join(fasta_dir,"stats.csv")):
+        stats = os.path.join(fasta_dir, "stats.csv")
         stats = pd.read_csv(stats, index_col=0)
         if stats_are_current():
-            filter_med_ad(FASTA_dir, stats, max_ns, c_range, s_range, m_range)
+            filter_med_ad(fasta_dir, stats, max_ns, c_range, s_range, m_range)
         else:
             mash_stats_and_filter()
     else:
