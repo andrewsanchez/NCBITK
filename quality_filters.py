@@ -298,8 +298,8 @@ def main():
 
     if len(os.listdir(fasta_dir)) <= 5: # pass if there are <= 5 FASTA's
         print("{} contains less than 5 genomes.".format(fasta_dir))
-    elif os.path.isfile(os.path.join(fasta_dir,"stats.csv")):
-        stats = os.path.join(fasta_dir, "stats.csv")
+    elif os.path.isfile(os.path.join(fasta_dir, "info", "stats.csv")):
+        stats = os.path.join(fasta_dir, "info", "stats.csv")
         stats = pd.read_csv(stats, index_col=0)
         if stats_are_current():
             filter_med_ad(fasta_dir, stats, max_ns, c_range, s_range, m_range)

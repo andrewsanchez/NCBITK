@@ -28,20 +28,21 @@ def clean_up_files_and_dirs(local_mirror, assembly_summary_df):
     renamed_dir = "{}_renamed".format(local_mirror)
 
     # Remove fastas from local_mirror no longer in assembly_summary.txt
-    for root, dirs, files in os.walk(local_mirror):
-        for name in files:
-            if name.startswith("GCA"):
-                accession_id = name.split("_")[0:2]
-                accession_id = "_".join(accession_id)
-                if accession_id not in assembly_summary_df.index:
-                    os.remove(os.path.join(root, name))
-                    with open(ncbitk_log, "a") as f:
+    with open(ncbitk_log, "a") as f:
+        for root, dirs, files in os.walk(local_mirror):
+            for name in files:
+                if name.startswith("GCA"):
+                    accession_id = name.split("_")[0:2]
+                    accession_id = "_".join(accession_id)
+                    if accession_id not in assembly_summary_df.index:
+                        os.remove(os.path.join(root, name))
                         f.write("{} removed, {}\n".format(name, time_stamp))
 
         # remove empty directories
         for name in dirs:
             name = os.path.join(root, name)
-            if not os.listdir(name):
+            if not os.listdir(name): # rm empty dirs
+                f.write("{} removed, {}\n".format(name, time_stamp))
                 os.rmdir(name)
 
     # Remove fastas from renamed_dir no longer in assembly_summary.txt
