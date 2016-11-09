@@ -12,8 +12,8 @@ def query_genome(sketch_files, reference_genome, threshold,  mash_exe):
     Popen(distance_command, shell="True").wait()
     distances = pd.read_csv(output, delimiter="\t", index_col=0, header=0)
     passed = distances[distances <=  threshold]
-    for genome in passed.index:
-
+    passed_log = os.path.join(sketch_files, "{}_{}".format(reference_genome, threshold))
+    passed.to_csv(passed_log)
 
 def main():
     parser = argparse.ArgumentParser(description = "Identify genomes within a provided distance from a single reference genome")
