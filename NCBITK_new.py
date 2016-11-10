@@ -3,6 +3,7 @@
 import os, rename_fastas, shutil, argparse
 import pandas as pd
 from urllib.request import urlretrieve
+from urllib.error import URLError
 from ftplib import FTP, error_temp
 from time import strftime, sleep
 
@@ -123,7 +124,7 @@ def write_latest_assembly_versions(genbank_mirror, species, ftp):
     with open(dir_structure, "a") as f:
         for accession in latest_assembly_versions:
             print("{} in {}".format(accession, species))
-            f.write("{},{}".format(species, accession))
+            f.write("{},{}\n".format(species, accession))
 
 def get_latest_assembly_versions(genbank_mirror, complete_species_list, ymdt):
 
@@ -138,6 +139,10 @@ def get_latest_assembly_versions(genbank_mirror, complete_species_list, ymdt):
 
     print("Getting latest assembly versions for {} species.".format(len(complete_species_list)))
     print("This will take several minutes.")
+
+    def log_error():
+            with open(genbank_stats, "a") as stats:
+                stats.write("{} - {} {}\n".format(species, no_latest_msg, ymd))
 
     for species in complete_species_list:
         try:
@@ -155,26 +160,68 @@ def get_latest_assembly_versions(genbank_mirror, complete_species_list, ymdt):
               # with open(genbank_stats, "a") as stats:
               #     stats.write("{} - {} {}\n".format(species, no_latest_msg, ymd))
 
-    def log_error():
-            with open(genbank_stats, "a") as stats:
-                stats.write("{} - {} {}\n".format(species, no_latest_msg, ymd))
-
-    latest_assembly_versions = pd.read_csv(species_and_accession_ids)
-    latest_assembly_versions.columns = ["species", "id"]
+    latest_assembly_versions = pd.read_csv(species_and_accession_ids, index_col=0, header=None)
+    latest_assembly_versions.columns = ["id"]
 
     return latest_assembly_versions
 
+def check_species_dirs(species):
 
-def generate_get_tree_commands(complete_species_list):
+    species_dir = os.path.join(genbank_mirror, species)
+    if not os.path.isdir(species_dir):
+        os.mkdir(species_dir)
 
-    """
-    Generate commands for use in slurm array to recreate genbank directory structure
-    """
+    return species_dir
 
-    ftp = ftp_login()
-    with open(os.path.join(genbank_mirror, "get_dir_structure_commands.txt"), "a") as f:
-        for species in complete_species_list:
-            pass
+def retrieve_unzipped_genome(genbank_mirror, species, genome):
+
+    zipped = "{}_genomic.fna.gz".format(genome)
+    zipped_url = "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/{}".format(zipped)
+    zipped_dst = os.path.join(genbank_mirror, species, zipped)
+    urlretrieve(zipped_url, zipped_dst)
+
+    return zipped_dst
+
+def download_and_unzip_genomes(genbank_mirror, zipped_dst, species, genome):
+
+    unzipped = "{}_genomic.fasta".format(genome)
+    unzipped_dst = os.path.join(genbank_mirror, species, unzipped)
+    zipped = gzip.open(zipped_dst)
+    unzipped = open(unzipped_dst, "wb")
+    decoded = zipped.read()
+    unzipped.write(decoded)
+    unzipped.close()
+    zipped.close()
+    os.remove(unzipped)
+    dst = os.path.join(genbank_mirror, species, genome)
+
+def mash():
+    None
+
+def grab_and_organize_genomes(genbank_mirror, latest_assembly_versions):
+
+    directories = set(list(latest_assembly_versions.index))
+
+    for species in directories:
+        species_dir = check_species_dirs(species)
+        current_genomes = os.listdir(species_dir)
+        latest_genomes = latest_assembly_versions.loc[species]
+
+        for genome in local_genomes:
+            fasta = "{}_genomic.fasta".format(genome)
+            if genome not in latest_genomes:
+                os.remove(os.path.join(genbank_mirror, species, fasta))
+
+        for genome in latest_assembly_versions:
+            fasta = "{}_genomic.fasta".format(genome)
+            if genome not in current_genomes:
+                try:
+                    zipped_dst = retrieve_unzipped_genome(genbank_mirror, species, genome)
+                except URLError:
+                    continue
+
+    for id in latest_assembly_versions["id"]:
+        None
 
 def mk_dir_structure(genbank_mirror, assembly_summary_df):
 
@@ -212,77 +259,6 @@ def mk_dir_structure(genbank_mirror, assembly_summary_df):
 
     rename_fastas.rename(renamed_dir, assembly_summary_df)
 
-def organize_and_get_genomes(latest_assembly_versions):
-
-    for genome in latest_assembly_versions["id"]:
-    None
-
-def get_species_from_list(species_and_or_genera):
-
-    """Generate species_list from list of species and/or genera"""
-
-    ftp = ftp_login()
-    complete_species_list = ftp_complete_species_list(genbank_mirror)
-    species_list = []
-
-    for i in species_and_or_genera:
-        for species in complete_species_list:
-            if species.startswith(i):
-                species_list.append(species)
-
-    return species_list
-
-def cp_files(source, destination):
-
-    """Copy new files to destination."""
-
-    for root, dirs, files in os.walk(source):
-        for f in files:
-            try:
-                source = os.path.join(root, f)
-                copy_to = os.path.join(destination, f)
-                shutil.copyfile(source, copy_to)
-            except shutil.SameFileError: # Skip files that already exist in destination
-                continue
-
-def gunzip(target_dir):
-
-    import gzip
-
-    """Unzip fastas"""
-
-    for root, dirs, files in os.walk(target_dir):
-        for f in files:
-            if f.endswith(".gz"):
-                f = os.path.join(root, f)
-                destination = os.path.splitext(f)[0]
-                zipped = gzip.open(f)
-                unzipped = open(destination, 'wb')
-                decoded = zipped.read()
-                unzipped.write(decoded)
-                zipped.close()
-                unzipped.close()
-                os.remove(f)
-
-def move_and_unzip(genbank_mirror, organism, assembly_summary_df):
-
-    renamed_dir = "{}_renamed".format(genbank_mirror)
-    species_dir = os.path.join(renamed_dir, organism)
-
-    if os.path.isdir(species_dir):
-        source = os.path.join(genbank_mirror, organism)
-        cp_files(source, species_dir)
-        gunzip(species_dir)
-
-    else:
-        os.mkdir(species_dir)
-        source = os.path.join(genbank_mirror, organism)
-        cp_files(source, species_dir)
-        gunzip(species_dir)
-
-    print("\nFiles renamed to:  ")
-    rename_fastas.rename(species_dir, assembly_summary_df)
-
 def main():
 
     parser = argparse.ArgumentParser(description = "Sync with NCBI's database and organize them in a sane way.")
@@ -297,20 +273,5 @@ def main():
     complete_species_list = ftp_complete_species_list()
     assembly_summary = get_assembly_summary(genbank_mirror, assembly_summary_location, assembly_summary_url)
     latest_assembly_versions = get_latest_assembly_versions(genbank_mirror, complete_species_list, ymdt)
- #  clean_up_files_and_dirs(genbank_mirror, assembly_summary_df)
-
- #  if args.rename:
- #      if args.rename_target:
- #          rename_target = os.path.join(renamed_dir, args.rename_target)
- #          rename_fastas.rename(rename_target, assembly_summary_df)
- #      else:
- #          complete_species_list = ftp_complete_species_list(genbank_mirror)
- #          get_accessions_in_latest_dirs(genbank_mirror, complete_species_list)
- #          mk_dir_structure(genbank_mirror, assembly_summary_df)
- #  else:
- #      ftp_paths = ftp_paths_from_assembly_summary(genbank_mirror, assembly_summary_df)
- #      complete_species_list = ftp_complete_species_list(genbank_mirror)
- #      dir_structure = get_dir_structure(genbank_mirror, complete_species_list)
- #      mk_dir_structure(genbank_mirror, assembly_summary_df)
 
 main()
