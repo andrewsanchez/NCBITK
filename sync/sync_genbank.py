@@ -4,8 +4,8 @@ import os, shutil, argparse, gzip
 import pandas as pd
 import rename
 from urllib.request import urlretrieve
-from ftplib import FTP, error_temp
 from urllib.error import URLError
+from ftplib import FTP, error_temp
 from time import strftime, sleep
 from glob import glob
 from re import sub
@@ -126,26 +126,34 @@ def grab_zipped_genome(genbank_mirror, species, genome_id, genome_path, ext=".fn
     zipped_dst = "{}_genomic{}".format(genome_id, ext)
     zipped_url = "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/{}/{}".format(genome_path, zipped)
     zipped_dst = os.path.join(genbank_mirror, species, zipped_dst)
-    zipped_src = zipped_dst
     urlretrieve(zipped_url, zipped_dst)
 
     return zipped_src
 
-def unzip_genome(genbank_mirror, zipped_src, species, genome_id):
+def unzip_genome(root, f, genome_id):
 
     """
     Decompress genome and remove the compressed genome.
     """
 
-    unzipped = "{}_genomic.fasta".format(genome_id)
-    unzipped = os.path.join(genbank_mirror, species, unzipped)
+    zipped_src = os.path.join(root, f)
     zipped = gzip.open(zipped_src)
     decoded = zipped.read()
+    unzipped = "{}.fasta".format(genome_id)
+    unzipped = os.path.join(root, unzipped)
     unzipped = open(unzipped, "wb")
     unzipped.write(decoded)
-    unzipped.close()
     zipped.close()
+    unzipped.close()
     os.remove(zipped_src)
+
+def unzip_genbank_mirror(genbank_mirror):
+
+    for root, files, dirs, in genbank_mirror:
+        for f in files:
+            if f.endswith("gz"):
+                genome_id = "_".join(f.split("_")[:2])
+                unzip_genome(root, zipped_src, genome_id)
 
 def check_local_genomes(genbank_mirror, species, local_genome_ids, latest_genome_ids, genbank_stats):
 
@@ -165,10 +173,8 @@ def sync_latest_genomes(genbank_mirror, species, local_genome_ids, ids_and_paths
         if genome_id not in local_genome_ids:
             try:
                 zipped_src = grab_zipped_genome(genbank_mirror, species, genome_id, genome_path)
-                unzip_genome(genbank_mirror, zipped_src, species, genome_id)
             except URLError:
                 zipped_src = grab_zipped_genome(genbank_mirror, species, genome_id, genome_path, ext=".fasta.gz")
-                unzip_genome(genbank_mirror, zipped_src, species, genome_id)
             except URLError:
                 with open(genbank_stats, "a") as stats:
                     stats.write("URLError for {}\n".format(genome_id))
@@ -216,6 +222,7 @@ def main():
     latest_assembly_versions = pd.read_csv(latest_assembly_versions, index_col=0, header=None)
     latest_assembly_versions.columns = ["id", "dir"]
     grab_and_organize_genomes(genbank_mirror, genbank_stats, latest_assembly_versions)
+    unzip_genbank_mirror(genbank_mirror)
     rename(genbank_mirror, assembly_summary)
 
 main()
