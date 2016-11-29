@@ -36,12 +36,16 @@ def check_dirs(genbank_mirror):
     if not os.path.isdir(info_dir):
         os.mkdir(info_dir)
 
-def ftp_login(directory="genomes/genbank/bacteria"):
+    slurm = os.path.join(genbank_mirror, ".info", "slurm")
+    if not os.path.isdir(slurm):
+        os.mkdir(slurm)
+
+def ftp_login(directory="genomes/genbank/bacteria", email="aas229@nau.edu"):
 
     """Login to ftp.ncbi.nlm.nih.gov"""
 
     ftp_site = 'ftp.ncbi.nlm.nih.gov'
-    ftp = FTP(ftp_site)
+    ftp = FTP(ftp_site, user="anonymous", passwd=email)
     print("Logging into ftp.ncbi.nlm.nih.gov/{}/".format(directory))
     ftp.login()
     ftp.cwd(directory)
@@ -76,7 +80,9 @@ def write_latest_assembly_versions(genbank_mirror, species, ftp):
 
     with open(latest_assembly_versions_list, "a") as f:
         for item in dirs_and_ids:
-            f.write("{},{},{}\n".format(species, item[1], item[0]))
+            genome_path = item[1]
+            accession_id = item[0]
+            f.write("{},{},{}\n".format(species, genome_path, accession_id))
 
 def get_latest_assembly_versions(genbank_mirror, complete_species_list, genbank_stats, ymdt):
 
@@ -128,8 +134,6 @@ def grab_zipped_genome(genbank_mirror, species, genome_id, genome_path, ext=".fn
     zipped_dst = os.path.join(genbank_mirror, species, zipped_dst)
     urlretrieve(zipped_url, zipped_dst)
 
-    return zipped_src
-
 def unzip_genome(root, f, genome_id):
 
     """
@@ -172,9 +176,9 @@ def sync_latest_genomes(genbank_mirror, species, local_genome_ids, ids_and_paths
         print(genome_id, genome_path)
         if genome_id not in local_genome_ids:
             try:
-                zipped_src = grab_zipped_genome(genbank_mirror, species, genome_id, genome_path)
+                grab_zipped_genome(genbank_mirror, species, genome_id, genome_path)
             except URLError:
-                zipped_src = grab_zipped_genome(genbank_mirror, species, genome_id, genome_path, ext=".fasta.gz")
+                grab_zipped_genome(genbank_mirror, species, genome_id, genome_path, ext=".fasta.gz")
             except URLError:
                 with open(genbank_stats, "a") as stats:
                     stats.write("URLError for {}\n".format(genome_id))
@@ -218,11 +222,11 @@ def main():
 #   check_dirs(genbank_mirror)
 #   complete_species_list = ftp_complete_species_list()
 #   latest_assembly_versions = get_latest_assembly_versions(genbank_mirror, complete_species_list, genbank_stats, ymdt)
-    latest_assembly_versions = os.path.join(genbank_mirror, ".info", "latest_assembly_versions.csv")
+    latest_assembly_versions = os.path.join(genbank_mirror, ".info", "latest_assembly_versions_20.csv")
     latest_assembly_versions = pd.read_csv(latest_assembly_versions, index_col=0, header=None)
     latest_assembly_versions.columns = ["id", "dir"]
     grab_and_organize_genomes(genbank_mirror, genbank_stats, latest_assembly_versions)
-    unzip_genbank_mirror(genbank_mirror)
-    rename(genbank_mirror, assembly_summary)
+#   unzip_genbank_mirror(genbank_mirror)
+#   rename(genbank_mirror, assembly_summary)
 
 main()

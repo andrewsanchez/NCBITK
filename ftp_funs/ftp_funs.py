@@ -1,3 +1,4 @@
+import os
 from ftplib import FTP, error_temp
 
 def ftp_login(directory="genomes/genbank/bacteria"):
@@ -6,7 +7,8 @@ def ftp_login(directory="genomes/genbank/bacteria"):
 
     ftp_site = 'ftp.ncbi.nlm.nih.gov'
     ftp = FTP(ftp_site)
-    print("Logging into ftp.ncbi.nlm.nih.gov/{}/".format(directory))
+    print(directory)
+    print("Logging into ftp.ncbi.nlm.nih.gov")
     ftp.login()
     ftp.cwd(directory)
 
@@ -30,3 +32,18 @@ def ftp_complete_species_list():
 
     return complete_species_list
 
+def check_dirs(genbank_mirror):
+
+    """Make directories to store fastas if they don't already exist."""
+
+    latest_assembly_versions_list = os.path.join(genbank_mirror, ".info", "latest_assembly_versions.csv")
+
+    if not os.path.isdir(genbank_mirror):
+        os.mkdir(genbank_mirror)
+
+    if os.path.isfile(latest_assembly_versions_list):
+        os.remove(latest_assembly_versions_list)
+
+    info_dir = os.path.join(genbank_mirror, ".info")
+    if not os.path.isdir(info_dir):
+        os.mkdir(info_dir)
