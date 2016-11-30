@@ -1,5 +1,8 @@
 import os
+import argparse
 from ftplib import FTP, error_temp
+from urllib.request import urlretrieve
+from urllib.error import URLError
 
 def ftp_login(directory="genomes/genbank/bacteria"):
 
@@ -32,18 +35,31 @@ def ftp_complete_species_list():
 
     return complete_species_list
 
-def check_dirs(genbank_mirror):
 
-    """Make directories to store fastas if they don't already exist."""
+def grab_zipped_genome(genbank_mirror, species, genome_id, genome_path, ext=".fna.gz"):
 
-    latest_assembly_versions_list = os.path.join(genbank_mirror, ".info", "latest_assembly_versions.csv")
+    """
+    Download compressed genome from ftp://ftp.ncbi.nlm.nih.gov/genomes/all/
+    """
 
-    if not os.path.isdir(genbank_mirror):
-        os.mkdir(genbank_mirror)
+    zipped = "{}_genomic{}".format(genome_path, ext)
+    zipped_dst = "{}_genomic{}".format(genome_id, ext)
+    zipped_url = "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/{}/{}".format(genome_path, zipped)
+    zipped_dst = os.path.join(genbank_mirror, species, zipped_dst)
+    urlretrieve(zipped_url, zipped_dst)
 
-    if os.path.isfile(latest_assembly_versions_list):
-        os.remove(latest_assembly_versions_list)
+def main():
 
-    info_dir = os.path.join(genbank_mirror, ".info")
-    if not os.path.isdir(info_dir):
-        os.mkdir(info_dir)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("genbank_mirror")
+    parser.add_argument("species")
+    parser.add_argument("genome_id")
+    parser.add_argument("genome_path")
+    parser.add_argument("-g", "--grab", action="store_true")
+    args = parser.parse_args()
+
+    if args.grab:
+        grab_zipped_genome(args.genbank_mirror, args.species, args.genome_id, args.genome_path)
+
+main()
+

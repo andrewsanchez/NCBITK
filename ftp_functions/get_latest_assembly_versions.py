@@ -12,7 +12,6 @@ def get_latest_assembly_versions(genbank_mirror, species):
 
     info_dir = os.path.join(genbank_mirror, ".info")
     slurm = os.path.join(info_dir, "slurm")
-    latest_assembly_versions = os.path.join(info_dir, "latest_assembly_versions_{}.txt".format(ymd))
     ftp = ftp_login()
     latest_dir = os.path.join(species, "latest_assembly_versions")
     with open(latest_assembly_versions, "a") as f:

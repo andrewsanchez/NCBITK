@@ -7,26 +7,32 @@ from subprocess import Popen
 from re import sub
 from ftp_functions.ftp_functions import *
 from slurm.generate_arrays import *
-#from sync.sync import *
 
-def generate_and_submit_arrays(genbank_mirror):
+def get_latest(genbank_mirror):
     clean_up(genbank_mirror)
     complete_species_list = ftp_complete_species_list()
     latest_assembly_versions_array = gen_latest_assembly_versions_array(genbank_mirror, complete_species_list)
     slurm_script = gen_latest_assembly_versions_script(genbank_mirror, latest_assembly_versions_array)
-    Popen("sbatch {}".format(slurm_script), shell="True").wait()
+    Popen("sbatch {}".format(slurm_script), shell="True")
+
+def update_genomes(genbank_mirror):
+    generate_sync_array(genbank_mirror) # (needs to depend on completion of latest_assembly_versions_script)
+    # generate slurm script to submit sync array
+    # submit sync array
 
 def parallel(genbank_mirror):
-    generate_and_submit_arrays(genbank_mirror)
+    get_latest(genbank_mirror)
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("genbank_mirror", help = "Directory to save fastas", type=str)
     parser.add_argument("-p", "--parallel", action="store_true")
+    parser.add_argument("-s", "--sync", action="store_true")
     args = parser.parse_args()
-
     genbank_mirror = args.genbank_mirror
     if args.parallel:
         parallel(genbank_mirror)
+    if args.sync:
+        update_genomes(genbank_mirror)
 
 main()

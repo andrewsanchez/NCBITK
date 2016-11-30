@@ -161,12 +161,10 @@ def unzip_genbank_mirror(genbank_mirror):
 
 def check_local_genomes(genbank_mirror, species, local_genome_ids, latest_genome_ids, genbank_stats):
 
-    with open(genbank_stats, "a") as stats:
-        for genome_id in local_genome_ids:
-            if genome_id not in latest_genome_ids:
-                fasta = glob("{}*".format(genome_id))
-                os.remove(os.path.join(genbank_mirror, species, fasta[0]))
-                stats.write("{} removed\n".format(fasta[0]))
+    for genome_id in local_genome_ids:
+        if genome_id not in latest_genome_ids:
+            fasta = glob("{}*".format(genome_id))
+            os.remove(os.path.join(genbank_mirror, species, fasta[0]))
 
 def sync_latest_genomes(genbank_mirror, species, local_genome_ids, ids_and_paths, genbank_stats):
 
