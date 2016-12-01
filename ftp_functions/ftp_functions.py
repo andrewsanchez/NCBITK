@@ -61,5 +61,5 @@ def main():
     if args.grab:
         grab_zipped_genome(args.genbank_mirror, args.species, args.genome_id, args.genome_path)
 
-main()
-
+if __name__ == "__main__":
+    main()
