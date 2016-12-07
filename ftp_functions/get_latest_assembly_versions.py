@@ -14,6 +14,7 @@ def get_latest_assembly_versions(genbank_mirror, species):
     slurm = os.path.join(info_dir, "slurm")
     ftp = ftp_login()
     latest_dir = os.path.join(species, "latest_assembly_versions")
+    latest_assembly_versions = os.path.join(info_dir, "latest_assembly_versions.csv")
     with open(latest_assembly_versions, "a") as f:
         complete_ids = [complete_id.split("/")[-1] for complete_id in ftp.nlst(latest_dir)]
         short_ids = ["_".join(accession_id.split("_")[:2]) for accession_id in complete_ids]
@@ -26,9 +27,12 @@ def main():
 
         parser = argparse.ArgumentParser(description = "Get the latest assembly versions for each species.")
         parser.add_argument("genbank_mirror", help = "Directory to save fastas", type=str)
-        parser.add_argument("species", type=str)
+        parser.add_argument("species", type=str, nargs='+')
         args = parser.parse_args()
-        get_latest_assembly_versions(args.genbank_mirror, args.species)
+        species = args.species
+        genbank_mirror = args.genbank_mirror
+        for item in species:
+            get_latest_assembly_versions(genbank_mirror, item)
 
-main()
-
+if __name__ == "__main__":
+    main()

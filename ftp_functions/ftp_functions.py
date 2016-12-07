@@ -57,9 +57,15 @@ def main():
     parser.add_argument("genome_path")
     parser.add_argument("-g", "--grab", action="store_true")
     args = parser.parse_args()
+    parser.add_argument("info", nargs='+')
 
     if args.grab:
-        grab_zipped_genome(args.genbank_mirror, args.species, args.genome_id, args.genome_path)
+        for cmds in args.info:
+            cmds = cmds.split(',')
+            grab_zipped_genome(args.genbank_mirror, cmds[0], cmds[1], cmds[2])
+
+   #if args.grab:
+   #    grab_zipped_genome(args.genbank_mirror, args.species, args.genome_id, args.genome_path)
 
 if __name__ == "__main__":
     main()
