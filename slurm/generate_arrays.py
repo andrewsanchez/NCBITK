@@ -5,40 +5,40 @@ import argparse
 import pandas as pd
 from re import sub
 from time import strftime
-from ftplib import FTP, error_temp
+#   from ftplib import FTP, error_temp
 
 ymd = strftime("%y.%m.%d")
 
-def ftp_login(directory="genomes/genbank/bacteria"):
+#   def ftp_login(directory="genomes/genbank/bacteria"):
 
-    """Login to ftp.ncbi.nlm.nih.gov"""
+#       """Login to ftp.ncbi.nlm.nih.gov"""
 
-    ftp_site = 'ftp.ncbi.nlm.nih.gov'
-    ftp = FTP(ftp_site)
-    print(directory)
-    print("Logging into ftp.ncbi.nlm.nih.gov")
-    ftp.login()
-    ftp.cwd(directory)
+#       ftp_site = 'ftp.ncbi.nlm.nih.gov'
+#       ftp = FTP(ftp_site)
+#       print(directory)
+#       print("Logging into ftp.ncbi.nlm.nih.gov")
+#       ftp.login()
+#       ftp.cwd(directory)
 
-    return ftp
+#       return ftp
 
-def ftp_complete_species_list():
+#   def ftp_complete_species_list():
 
-    """Connect to NCBI's ftp site and retrieve complete list of bacteria."""
+#       """Connect to NCBI's ftp site and retrieve complete list of bacteria."""
 
-    ftp = ftp_login()
+#       ftp = ftp_login()
 
-    print("Getting list of all bacteria directories.")
-    print("Estimated wait time:  1 minute.")
-    try:
-        complete_species_list = ftp.nlst()
-    except error_temp:
-        sleep(30)
-        complete_species_list = ftp.nlst()
+#       print("Getting list of all bacteria directories.")
+#       print("Estimated wait time:  1 minute.")
+#       try:
+#           complete_species_list = ftp.nlst()
+#       except error_temp:
+#           sleep(30)
+#           complete_species_list = ftp.nlst()
 
-    print("All bacteria directories succesfully read from ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/")
+#       print("All bacteria directories succesfully read from ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/")
 
-    return complete_species_list
+#       return complete_species_list
 
 def instantiate_df(path, cols):
     df = pd.read_csv(path, index_col=0, header=None)
@@ -82,10 +82,11 @@ def gen_latest_assembly_versions_array(genbank_mirror, complete_species_list):
     info_dir = os.path.join(genbank_mirror, ".info")
     slurm = os.path.join(info_dir, "slurm")
     latest_assembly_versions_array = os.path.join(slurm, "latest_assembly_versions_array.txt")
-    groups = [complete_species_list[n:n+44] for n in range(0, len(complete_species_list), 44)]
+    groups = [complete_species_list[n:n+10] for n in range(0, len(complete_species_list), 10)]
+    print('Get latest array groups:  ', len(groups))
     with open(latest_assembly_versions_array, "a") as f:
         for group in groups:
-            group = ' '.join(group).strip()
+            group = ' '.join(group)
             f.write("python /common/contrib/tools/NCBITK/ftp_functions/get_latest_assembly_versions.py {} {}\n".format(genbank_mirror, group))
 
     return latest_assembly_versions_array
@@ -96,18 +97,18 @@ def gen_latest_assembly_versions_script(genbank_mirror, latest_assembly_versions
     info_dir = os.path.join(genbank_mirror, ".info")
     slurm = os.path.join(info_dir, "slurm")
     out = os.path.join(slurm, "out", "get_latest_%a.out")
-    get_latest_script = os.path.join(slurm, "get_latest_assembly_versions.sh")
+    latest_assembly_versions_script = os.path.join(slurm, "get_latest_assembly_versions.sh")
     array_len = len(list(open(latest_assembly_versions_array)))
-    with open(get_latest_script, "a") as f:
+    with open(latest_assembly_versions_script, "a") as f:
         f.write("#!/bin/sh\n")
         f.write("#SBATCH --time=00:30\n")
         f.write("#SBATCH --job-name=get_latest\n")
         f.write("#SBATCH --output={}\n".format(out))
-        f.write("#SBATCH --array=1-{}\n".format(array_len))
+        f.write("#SBATCH --array=1-{}%2\n".format(array_len))
         f.write('cmd=$(sed -n "$SLURM_ARRAY_TASK_ID"p "{}")\n'.format(latest_assembly_versions_array))
         f.write("srun $cmd")
 
-    return get_latest_script 
+    return latest_assembly_versions_script 
 
 def gen_sync_array_new(genbank_mirror):
 
@@ -116,13 +117,12 @@ def gen_sync_array_new(genbank_mirror):
     if os.path.isfile(sync_array):
         os.remove(sync_array)
     info = [i.strip() for i in list(open(latest_assembly_versions))]
-    groups = [info[n:n+30] for n in range(0, len(info), 30)]
-    print(len(groups))
+    groups = [info[n:n+30] for n in range(0, len(info), 30)] 
     with open(sync_array, "a") as f:
         for group in groups:
             f.write("python /common/contrib/tools/NCBITK/ftp_functions/ftp_functions.py -g {} {}\n".format(genbank_mirror, ' '.join(group)))
 
-    return sync_array
+    #return sync_array
 
 def gen_sync_array(genbank_mirror):
 

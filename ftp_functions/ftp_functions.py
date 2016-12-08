@@ -8,11 +8,11 @@ def ftp_login(directory="genomes/genbank/bacteria"):
 
     """Login to ftp.ncbi.nlm.nih.gov"""
 
-    ftp_site = 'ftp.ncbi.nlm.nih.gov'
-    ftp = FTP(ftp_site)
     print(directory)
     print("Logging into ftp.ncbi.nlm.nih.gov")
-    ftp.login()
+    ftp_site = 'ftp.ncbi.nlm.nih.gov'
+    ftp = FTP(ftp_site)
+    ftp.login(user='anonymous', passwd='aas229@nau.edu')
     ftp.cwd(directory)
 
     return ftp
