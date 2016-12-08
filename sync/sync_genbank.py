@@ -2,7 +2,7 @@
 
 import os, shutil, argparse, gzip
 import pandas as pd
-import rename
+#import rename
 from urllib.request import urlretrieve
 from urllib.error import URLError
 from ftplib import FTP, error_temp
@@ -153,7 +153,7 @@ def unzip_genome(root, f, genome_id):
 
 def unzip_genbank_mirror(genbank_mirror):
 
-    for root, files, dirs, in genbank_mirror:
+    for root, files, dirs, in os.walk(genbank_mirror):
         for f in files:
             if f.endswith("gz"):
                 genome_id = "_".join(f.split("_")[:2])
@@ -207,25 +207,26 @@ def log_error(msg, species, genbank_stats, ymdt):
         with open(genbank_stats, "a") as stats:
             stats.write("{} - {} {}\n".format(species, msg, ymdt))
 
-def main():
+#def main():
 
-    parser = argparse.ArgumentParser(description = "Sync with NCBI's database and organize them in a sane way.")
-    parser.add_argument("genbank_mirror", help = "Directory to save fastas", type=str)
-    args = parser.parse_args()
+#   parser = argparse.ArgumentParser(description = "Sync with NCBI's database and organize them in a sane way.")
+#   parser.add_argument("genbank_mirror", help = "Directory to save fastas", type=str)
+#   args = parser.parse_args()
 
 #   assembly_summary = get_assembly_summary(genbank_mirror, assembly_summary_url="ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt")
 #   check_dirs(genbank_mirror)
 #   complete_species_list = ftp_complete_species_list()
 #   latest_assembly_versions = get_latest_assembly_versions(genbank_mirror, complete_species_list, genbank_stats, ymdt)
-    genbank_mirror = args.genbank_mirror
-    ymdt = strftime("%y.%m.%d_%H%M")
-    ymd = strftime("%y.%m.%d")
-    genbank_stats = os.path.join(genbank_mirror, ".info", "genbank_stats_{}.txt".format(ymd))
-    latest_assembly_versions = os.path.join(genbank_mirror, ".info", "latest_assembly_versions_{}.txt".format(ymd))
-    latest_assembly_versions = pd.read_csv(latest_assembly_versions, index_col=0, header=None).head()
-    latest_assembly_versions.columns = ["dir", "id"]
-    grab_and_organize_genomes(genbank_mirror, genbank_stats, latest_assembly_versions)
+#   genbank_mirror = args.genbank_mirror
+#   ymdt = strftime("%y.%m.%d_%H%M")
+#   ymd = strftime("%y.%m.%d")
+#   genbank_stats = os.path.join(genbank_mirror, ".info", "genbank_stats_{}.txt".format(ymd))
+#   latest_assembly_versions = os.path.join(genbank_mirror, ".info", "latest_assembly_versions_{}.txt".format(ymd))
+#   latest_assembly_versions = pd.read_csv(latest_assembly_versions, index_col=0, header=None).head()
+#   latest_assembly_versions.columns = ["dir", "id"]
+#   grab_and_organize_genomes(genbank_mirror, genbank_stats, latest_assembly_versions)
 #   unzip_genbank_mirror(genbank_mirror)
 #   rename(genbank_mirror, assembly_summary)
 
-main()
+if __name__ == "__main__":
+    main()

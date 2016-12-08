@@ -2,43 +2,22 @@
 
 import os
 import argparse
+import subprocess
 import pandas as pd
 from re import sub
-from time import strftime
-#   from ftplib import FTP, error_temp
+from time import strftime, sleep
 
 ymd = strftime("%y.%m.%d")
 
-#   def ftp_login(directory="genomes/genbank/bacteria"):
+def submit_sbatch(slurm_script):
 
-#       """Login to ftp.ncbi.nlm.nih.gov"""
+    job_id, errs = subprocess.Popen("sbatch {}".format(slurm_script), # submit array
+            shell="True",  stdout=subprocess.PIPE, universal_newlines=True).communicate()
+    print(job_id)
+    job_id = job_id.split(" ")[-1].strip()
 
-#       ftp_site = 'ftp.ncbi.nlm.nih.gov'
-#       ftp = FTP(ftp_site)
-#       print(directory)
-#       print("Logging into ftp.ncbi.nlm.nih.gov")
-#       ftp.login()
-#       ftp.cwd(directory)
+    return job_id
 
-#       return ftp
-
-#   def ftp_complete_species_list():
-
-#       """Connect to NCBI's ftp site and retrieve complete list of bacteria."""
-
-#       ftp = ftp_login()
-
-#       print("Getting list of all bacteria directories.")
-#       print("Estimated wait time:  1 minute.")
-#       try:
-#           complete_species_list = ftp.nlst()
-#       except error_temp:
-#           sleep(30)
-#           complete_species_list = ftp.nlst()
-
-#       print("All bacteria directories succesfully read from ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/")
-
-#       return complete_species_list
 
 def instantiate_df(path, cols):
     df = pd.read_csv(path, index_col=0, header=None)
@@ -78,12 +57,11 @@ def check_local_genomes(genbank_mirror, species, local_genome_ids, latest_genome
 
 def gen_latest_assembly_versions_array(genbank_mirror, complete_species_list):
 
-    print("Generating slurm array.")
     info_dir = os.path.join(genbank_mirror, ".info")
     slurm = os.path.join(info_dir, "slurm")
     latest_assembly_versions_array = os.path.join(slurm, "latest_assembly_versions_array.txt")
+    print('Generating {}'.format(latest_assembly_versions_array))
     groups = [complete_species_list[n:n+10] for n in range(0, len(complete_species_list), 10)]
-    print('Get latest array groups:  ', len(groups))
     with open(latest_assembly_versions_array, "a") as f:
         for group in groups:
             group = ' '.join(group)
@@ -93,106 +71,90 @@ def gen_latest_assembly_versions_array(genbank_mirror, complete_species_list):
 
 def gen_latest_assembly_versions_script(genbank_mirror, latest_assembly_versions_array):
 
-    print("Generating slurm script.")
     info_dir = os.path.join(genbank_mirror, ".info")
     slurm = os.path.join(info_dir, "slurm")
     out = os.path.join(slurm, "out", "get_latest_%a.out")
     latest_assembly_versions_script = os.path.join(slurm, "get_latest_assembly_versions.sh")
+    print('Generating {}'.format(latest_assembly_versions_script))
     array_len = len(list(open(latest_assembly_versions_array)))
     with open(latest_assembly_versions_script, "a") as f:
         f.write("#!/bin/sh\n")
-        f.write("#SBATCH --time=00:30\n")
+        f.write("#SBATCH --time=01:00\n")
         f.write("#SBATCH --job-name=get_latest\n")
-        f.write("#SBATCH --output={}\n".format(out))
+        f.write("#SBATCH --output={}\n".format(out)) # can I remove this line to avoid getting out files?
         f.write("#SBATCH --array=1-{}%2\n".format(array_len))
         f.write('cmd=$(sed -n "$SLURM_ARRAY_TASK_ID"p "{}")\n'.format(latest_assembly_versions_array))
         f.write("srun $cmd")
 
     return latest_assembly_versions_script 
 
-def gen_sync_array_new(genbank_mirror):
+def gen_sync_array_script(genbank_mirror, get_latest_job_id):
+
+    info_dir = os.path.join(genbank_mirror, ".info")
+    slurm = os.path.join(info_dir, "slurm")
+    out = os.path.join(slurm, "out", 'gen_sync_array.out')
+    sync_array_script = os.path.join(slurm, 'sync_array_script.sh')
+    print('Generating {}'.format(sync_array_script))
+
+    if os.path.isfile(sync_array_script):
+        os.remove(sync_array_script)
+
+    with open(sync_array_script, 'a') as f:
+        f.write("#!/bin/sh\n")
+        f.write("#SBATCH --time=01:00\n")
+        f.write("#SBATCH --job-name=gen_sync_array\n")
+        f.write("#SBATCH --output={}\n".format(out))
+        f.write("#SBATCH --dependency={}\n".format(get_latest_job_id))
+        f.write('cmd="python /common/contrib/tools/NCBITK/slurm/generate_arrays.py {}"\n'.format(genbank_mirror))
+        f.write("srun $cmd")
+    
+    return sync_array_script 
+
+def gen_grab_genomes_script(genbank_mirror, sync_array_job_id):
+
+    info_dir = os.path.join(genbank_mirror, ".info")
+    slurm = os.path.join(info_dir, "slurm")
+    out = os.path.join(slurm, "out", 'grab_genomes.out')
+    sync_array = os.path.join(slurm, "sync_array.txt")
+    grab_genomes_script = os.path.join(slurm, 'grab_genomes_script.sh')
+    print('Generating {}'.format(grab_genomes_script))
+
+    if os.path.isfile(grab_genomes_script):
+        os.remove(grab_genomes_script)
+
+    while not os.path.isfile(sync_array):
+        sleep(1)
+    else:
+        sync_array_len = len(list(open(sync_array)))
+
+    with open(grab_genomes_script, 'a') as f:
+        f.write("#!/bin/sh\n")
+        f.write("#SBATCH --time=01:00\n")
+        f.write("#SBATCH --job-name=grab_genomes\n")
+        f.write("#SBATCH --output={}\n".format(out))
+        f.write("#SBATCH --dependency={}\n".format(sync_array_job_id))
+        f.write("#SBATCH --array=1-{}%2\n".format(sync_array_len))
+        f.write('cmd=$(sed -n "$SLURM_ARRAY_TASK_ID"p "{}")\n'.format(sync_array))
+        f.write("srun $cmd")
+    
+    return grab_genomes_script
+
+def write_grab_genome_commands(genbank_mirror):
 
     latest_assembly_versions = os.path.join(genbank_mirror, ".info", "latest_assembly_versions.csv")
+
     sync_array = os.path.join(genbank_mirror, ".info", "slurm", "sync_array.txt")
+    print('Generating {}'.format(sync_array))
     if os.path.isfile(sync_array):
         os.remove(sync_array)
     info = [i.strip() for i in list(open(latest_assembly_versions))]
-    groups = [info[n:n+30] for n in range(0, len(info), 30)] 
+    groups = [info[n:n+25] for n in range(0, len(info), 25)] 
     with open(sync_array, "a") as f:
         for group in groups:
             f.write("python /common/contrib/tools/NCBITK/ftp_functions/ftp_functions.py -g {} {}\n".format(genbank_mirror, ' '.join(group)))
 
-    #return sync_array
+    return sync_array
 
-def gen_sync_array(genbank_mirror):
-
-    latest_assembly_versions = instantiate_df(os.path.join(genbank_mirror, ".info", "latest_assembly_versions.csv"), ["id", "dir"])
-    sync_array = os.path.join(genbank_mirror, ".info", "slurm", "sync_array.txt")
-    if os.path.isfile(sync_array):
-        os.remove(sync_array)
-    with open(sync_array, "a") as f:
-        species_directories = list(set(latest_assembly_versions.index))
-        info = []
-        for species in species_directories:
-            species_dir = check_species_dirs(genbank_mirror, species)
-            print("Assessing {}".format(species_dir))
-            local_genome_ids = ["_".join(genome_id.split("_")[:2]) for genome_id in os.listdir(species_dir)]
-            latest_genome_ids = [sub("[\[\]']", "", str(i)) for i in latest_assembly_versions.loc[species, ["id"]].values.tolist()]
-            latest_genome_paths = [sub("[\[\]]", "", str(i)) for i in latest_assembly_versions.loc[species, ["dir"]].values.tolist()]
-            check_local_genomes(genbank_mirror, species, local_genome_ids, latest_genome_ids)
-            for id in latest_genome_ids:
-                info.append((species, latest_genome_ids, latest_genome_paths))
-
-            #ids_and_paths = list(zip(latest_genome_ids, latest_genome_paths))
-        groups = [info[n:n+30] for n in range(0, len(info), 30)]
-        for group in groups:
-            print(group)
-            grab_genome_args = []
-            for tup in group:
-                print(tup)
-                species = tup[0]
-                genome_id = tup[1]
-                genome_path = tup[2]
-                print(species, genome_id, genome_path)
-                if genome_id not in local_genome_ids:
-                    grab_genome_args.append(','.join([species,genome_id,genome_path]))
-
-            print(grab_genome_args)
-            for arg in grab_genome_args:
-                print("python /common/contrib/tools/NCBITK/ftp_functions/ftp_functions.py -g {} {}\n"\
-                        .format(genbank_mirror, ' '.join(arg)))
-                f.write("python /common/contrib/tools/NCBITK/ftp_functions/ftp_functions.py -g {} {}\n"\
-                        .format(genbank_mirror, ' '.join(arg)))
-
-           #for info in ids_and_paths:
-           #    genome_id = info[0]
-           #    genome_path = info[1]
-           #    if genome_id not in local_genome_ids:
-           #        f.write("python /common/contrib/tools/NCBITK/ftp_functions/ftp_functions.py -g {} {} {} {}\n"\
-           #                .format(genbank_mirror, species, genome_id, genome_path))
-
-    #return sync_array
-
-def gen_sync_script(genbank_mirror, sync_array):
-
-    print("Generating slurm script.")
-    info_dir = os.path.join(genbank_mirror, ".info")
-    slurm = os.path.join(info_dir, "slurm")
-    out = os.path.join(slurm, "out", "grab_genome_%a.out")
-    sync_script = os.path.join(slurm, "sync_genbank.sh")
-    if os.path.isfile(sync_script):
-        os.remove(sync_script)
-    array_len = len(list(open(sync_array)))
-    with open(sync_script, "a") as f:
-        f.write("#!/bin/sh\n")
-        f.write("#SBATCH --time=00:30\n")
-        f.write("#SBATCH --job-name=grab_genome\n")
-        f.write("#SBATCH --output={}".format(out))
-        f.write("#SBATCH --array=1-{}%5\n".format(array_len))
-        f.write('cmd=$(sed -n "$SLURM_ARRAY_TASK_ID"p "{}")\n'.format(sync_array))
-        f.write("srun $cmd")
-
-    return sync_script 
 
 def main():
 
@@ -200,7 +162,7 @@ def main():
     parser.add_argument("genbank_mirror")
     args = parser.parse_args()
 
-    gen_sync_array_new(args.genbank_mirror)
+    write_grab_genome_commands(args.genbank_mirror)
 
 if __name__ == "__main__":
     main()

@@ -19,12 +19,12 @@ def rename(target_dir, assembly_summary):
     """
 
     # If infraspecific_name and isolate columns are empty, fill infraspecific_name with "NA"
-    assembly_summary.update(assembly_summary_df['infraspecific_name'][(assembly_summary_df['infraspecific_name'].isnull()) &\
+    assembly_summary.update(assembly_summary['infraspecific_name'][(assembly_summary['infraspecific_name'].isnull()) &\
             (assembly_summary['isolate'].isnull())].fillna('NA'))
 
     # If infraspecific_name column is empty and isolate column is not empty, fill infraspecific_name with the value of isolate.
-    assembly_summary.update(assembly_summary_df['infraspecific_name'][(assembly_summary_df['infraspecific_name'].isnull()) &\
-            (assembly_summary['isolate'].notnull())].fillna(assembly_summary_df['isolate']))
+    assembly_summary.update(assembly_summary['infraspecific_name'][(assembly_summary['infraspecific_name'].isnull()) &\
+            (assembly_summary['isolate'].notnull())].fillna(assembly_summary['isolate']))
 
     assembly_summary.assembly_level.replace({' ': '_'}, regex=True, inplace=True)
     assembly_summary.organism_name.replace({' ': '_'}, regex=True, inplace=True)

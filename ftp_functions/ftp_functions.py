@@ -35,7 +35,6 @@ def ftp_complete_species_list():
 
     return complete_species_list
 
-
 def grab_zipped_genome(genbank_mirror, species, genome_id, genome_path, ext=".fna.gz"):
 
     """
@@ -52,20 +51,15 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("genbank_mirror")
-    parser.add_argument("species")
-    parser.add_argument("genome_id")
-    parser.add_argument("genome_path")
+    parser.add_argument("info", nargs='+')
     parser.add_argument("-g", "--grab", action="store_true")
     args = parser.parse_args()
-    parser.add_argument("info", nargs='+')
 
     if args.grab:
-        for cmds in args.info:
-            cmds = cmds.split(',')
-            grab_zipped_genome(args.genbank_mirror, cmds[0], cmds[1], cmds[2])
-
-   #if args.grab:
-   #    grab_zipped_genome(args.genbank_mirror, args.species, args.genome_id, args.genome_path)
+        for grab_genome_args in args.info:
+            grab_genome_args = grab_genome_args.split(',')
+            species, genome_id, genome_path = grab_genome_args
+            grab_zipped_genome(args.genbank_mirror, species, genome_id, genome_path)
 
 if __name__ == "__main__":
     main()
