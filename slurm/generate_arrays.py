@@ -9,6 +9,12 @@ from time import strftime, sleep
 
 ymd = strftime("%y.%m.%d")
 
+def instantiate_path_vars(genbank_mirror):
+    info_dir = os.path.join(genbank_mirror, ".info")
+    slurm = os.path.join(info_dir, "slurm")
+    out = os.path.join(slurm, "out", 'gen_sync_array.out')
+    return info_dir, slurm, out
+
 def submit_sbatch(slurm_script):
 
     job_id, errs = subprocess.Popen("sbatch {}".format(slurm_script), # submit array
@@ -89,16 +95,14 @@ def gen_latest_assembly_versions_script(genbank_mirror, latest_assembly_versions
     return latest_assembly_versions_script 
 
 def gen_sync_array_script(genbank_mirror, get_latest_job_id):
-
-    info_dir = os.path.join(genbank_mirror, ".info")
-    slurm = os.path.join(info_dir, "slurm")
-    out = os.path.join(slurm, "out", 'gen_sync_array.out')
+    info_dir, slurm, out = instantiate_path_vars(genbank_mirror)
     sync_array_script = os.path.join(slurm, 'sync_array_script.sh')
     print('Generating {}'.format(sync_array_script))
 
     if os.path.isfile(sync_array_script):
         os.remove(sync_array_script)
 
+    # consolidate into function
     with open(sync_array_script, 'a') as f:
         f.write("#!/bin/sh\n")
         f.write("#SBATCH --time=01:00\n")
@@ -112,9 +116,7 @@ def gen_sync_array_script(genbank_mirror, get_latest_job_id):
 
 def gen_grab_genomes_script(genbank_mirror, sync_array_job_id):
 
-    info_dir = os.path.join(genbank_mirror, ".info")
-    slurm = os.path.join(info_dir, "slurm")
-    out = os.path.join(slurm, "out", 'grab_genomes.out')
+    info_dir, slurm, out = instantiate_path_vars(genbank_mirror)
     sync_array = os.path.join(slurm, "sync_array.txt")
     grab_genomes_script = os.path.join(slurm, 'grab_genomes_script.sh')
     print('Generating {}'.format(grab_genomes_script))
@@ -129,7 +131,7 @@ def gen_grab_genomes_script(genbank_mirror, sync_array_job_id):
 
     with open(grab_genomes_script, 'a') as f:
         f.write("#!/bin/sh\n")
-        f.write("#SBATCH --time=01:00\n")
+        f.write("#SBATCH --time=04:30\n")
         f.write("#SBATCH --job-name=grab_genomes\n")
         f.write("#SBATCH --output={}\n".format(out))
         f.write("#SBATCH --dependency={}\n".format(sync_array_job_id))
@@ -148,7 +150,7 @@ def write_grab_genome_commands(genbank_mirror):
     if os.path.isfile(sync_array):
         os.remove(sync_array)
     info = [i.strip() for i in list(open(latest_assembly_versions))]
-    groups = [info[n:n+25] for n in range(0, len(info), 25)] 
+    groups = [info[n:n+100] for n in range(0, len(info), 25)] 
     with open(sync_array, "a") as f:
         for group in groups:
             f.write("python /common/contrib/tools/NCBITK/ftp_functions/ftp_functions.py -g {} {}\n".format(genbank_mirror, ' '.join(group)))

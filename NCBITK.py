@@ -12,7 +12,7 @@ from sync.rename import *
 
 def get_latest(genbank_mirror):
 
-    complete_species_list = ftp_complete_species_list()[:50]
+    complete_species_list = ftp_complete_species_list()
     latest_assembly_versions_array = gen_latest_assembly_versions_array(genbank_mirror, complete_species_list)
     latest_assembly_versions_script = gen_latest_assembly_versions_script(genbank_mirror, latest_assembly_versions_array)
     get_latest_job_id = submit_sbatch(latest_assembly_versions_script)
@@ -33,13 +33,6 @@ def parallel(genbank_mirror):
     get_latest_job_id = get_latest(genbank_mirror)
     update_genomes(genbank_mirror, get_latest_job_id)
 
-def dir_vars(genbank_mirror):
-    info_dir = os.path.join(genbank_mirror, ".info")
-    slurm = os.path.join(info_dir, "slurm")
-    out = os.path.join(slurm, "out")
-    dirs = info_dir, slurm, out
-    return dirs
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("genbank_mirror", help = "Directory to save fastas", type=str)
@@ -47,7 +40,7 @@ def main():
     parser.add_argument("-s", "--sync", action="store_true")
     args = parser.parse_args()
     genbank_mirror = args.genbank_mirror
-    dirs = dir_vars(genbank_mirror)
+    paths = instantiate_path_vars(genbank_mirror)
 
     clean_up(genbank_mirror)
     assembly_summary = get_assembly_summary(genbank_mirror, assembly_summary_url="ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt")
@@ -57,7 +50,7 @@ def main():
         update_genomes(genbank_mirror) # submit this via sbatch in the cron job - make it depend on latest_assembly_versions_script
     # might have to submit these via sbatch as well...
     # or just submit them a few hours after the above jobs
-    unzip_genbank_mirror(genbank_mirror)
-    rename(genbank_mirror, assembly_summary)
+#   unzip_genbank_mirror(genbank_mirror)
+#   rename(genbank_mirror, assembly_summary)
 
 main()
