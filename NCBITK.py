@@ -2,55 +2,34 @@
 
 import os
 import argparse
+import prun
+import curate
 from re import sub
-from time import sleep
-from time import strftime
-from slurm.generate_arrays import *
+from time import sleep, strftime
 from ftp_functions.ftp_functions import ftp_login, ftp_complete_species_list 
-from sync.sync_genbank import unzip_genbank_mirror, get_assembly_summary
-from sync.rename import *
-
-def get_latest(genbank_mirror):
-
-    complete_species_list = ftp_complete_species_list()
-    latest_assembly_versions_array = gen_latest_assembly_versions_array(genbank_mirror, complete_species_list)
-    latest_assembly_versions_script = gen_latest_assembly_versions_script(genbank_mirror, latest_assembly_versions_array)
-    get_latest_job_id = submit_sbatch(latest_assembly_versions_script)
-    last_task_number = len(list(open(latest_assembly_versions_array )))
-    get_latest_job_id = '{}_{}'.format(get_latest_job_id, last_task_number)
-
-    return get_latest_job_id
-
-def update_genomes(genbank_mirror, get_latest_job_id):
-
-    sync_array_script = gen_sync_array_script(genbank_mirror, get_latest_job_id)
-    sleep(30) # make sure the following job doesn't get submitted too soon.
-    sync_array_job_id = submit_sbatch(sync_array_script)
-    grab_genomes_script = gen_grab_genomes_script(genbank_mirror, sync_array_job_id)
-    job_id = submit_sbatch(grab_genomes_script)
 
 def parallel(genbank_mirror):
-    get_latest_job_id = get_latest(genbank_mirror)
-    update_genomes(genbank_mirror, get_latest_job_id)
+    paths = curate.instantiate_path_vars(genbank_mirror)
+    get_latest_job_id = prun.get_latest(genbank_mirror, paths)
+    prun.update_genomes(genbank_mirror, get_latest_job_id)
+    #dependency_id = update_genomes(genbank_mirror, get_latest_job_id)
+#   cmd = 'python /common/contrib/tools/NCBITK/sync/rename.py {}'.format(genbank_mirror)
+#   salloc(cmd, dependency_id)
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("genbank_mirror", help = "Directory to save fastas", type=str)
-    parser.add_argument("-p", "--parallel", action="store_true")
+    parser.add_argument("-p", "--parallel", help = 'Submit jobs in parallel via SLURM arrays.', action="store_true")
     parser.add_argument("-s", "--sync", action="store_true")
     args = parser.parse_args()
-    genbank_mirror = args.genbank_mirror
-    paths = instantiate_path_vars(genbank_mirror)
 
-    clean_up(genbank_mirror)
-    assembly_summary = get_assembly_summary(genbank_mirror, assembly_summary_url="ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt")
+    genbank_mirror = args.genbank_mirror
+    curate.clean_up(genbank_mirror)
+    path_vars = curate.instantiate_path_vars(genbank_mirror)
+
     if args.parallel:
         parallel(genbank_mirror)
-    if args.sync:
+    elif args.sync:
         update_genomes(genbank_mirror) # submit this via sbatch in the cron job - make it depend on latest_assembly_versions_script
-    # might have to submit these via sbatch as well...
-    # or just submit them a few hours after the above jobs
-#   unzip_genbank_mirror(genbank_mirror)
-#   rename(genbank_mirror, assembly_summary)
 
 main()

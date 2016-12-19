@@ -1,6 +1,42 @@
 #!/usr/bin/env python
 import os, re, argparse
 import pandas as pd
+from urllib.request import urlretrieve
+
+def get_assembly_summary(genbank_mirror, assembly_summary_url="ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt"):
+
+    """Get current version of assembly_summary.txt and load into DataFrame"""
+
+    assembly_summary_dst = os.path.join(genbank_mirror, ".info", "assembly_summary.txt")
+    urlretrieve(assembly_summary_url, assembly_summary_dst)
+    assembly_summary = pd.read_csv(assembly_summary_dst, sep="\t", index_col=0, skiprows=1)
+
+    return assembly_summary
+
+def unzip_genome(root, f, genome_id):
+
+    """
+    Decompress genome and remove the compressed genome.
+    """
+
+    zipped_src = os.path.join(root, f)
+    zipped = gzip.open(zipped_src)
+    decoded = zipped.read()
+    unzipped = "{}.fasta".format(genome_id)
+    unzipped = os.path.join(root, unzipped)
+    unzipped = open(unzipped, "wb")
+    unzipped.write(decoded)
+    zipped.close()
+    unzipped.close()
+    os.remove(zipped_src)
+
+def unzip_genbank_mirror(genbank_mirror):
+
+    for root, files, dirs, in os.walk(genbank_mirror):
+        for f in files:
+            if f.endswith("gz"):
+                genome_id = "_".join(f.split("_")[:2])
+                unzip_genome(root, f, genome_id)
 
 def rm_duplicates(seq):
 
@@ -55,8 +91,11 @@ def main():
     parser.add_argument('target_dir', help = 'The folder whose contents will be renamed', type=str)
     parser.add_argument('-s', '--source', help = 'Specify a directory to rename.', action="store_true")
     args = parser.parse_args()
+    genbank_mirror = args.target_dir
 
-    rename(args.target_dir, assembly_summary)
+    assembly_summary = get_assembly_summary(genbank_mirror, assembly_summary_url="ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt")
+    unzip_genbank_mirror(genbank_mirror)
+   #rename(genbank_mirror, assembly_summary)
 
 if __name__ == '__main__':
     main()
