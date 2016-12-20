@@ -46,13 +46,14 @@ def clean_up(genbank_mirror):
         if os.path.isfile(f):
             os.remove(f)
 
-def check_species_dirs(genbank_mirror, species):
+def check_species_dirs(genbank_mirror, complete_species_list):
 
-    species_dir = os.path.join(genbank_mirror, species)
-    if not os.path.isdir(species_dir):
-        os.mkdir(species_dir)
+    print('Checking directories for each species in complete_species_list')
 
-    return species_dir
+    for species in complete_species_list:
+        species_dir = os.path.join(genbank_mirror, species)
+        if not os.path.isdir(species_dir):
+            os.mkdir(species_dir)
 
 def remove_old_genomes(genbank_mirror):
 

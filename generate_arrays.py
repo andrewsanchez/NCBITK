@@ -149,7 +149,7 @@ def gen_grab_genomes_script(genbank_mirror, sync_array_job_id):
 def write_grab_genome_commands(genbank_mirror):
 
     latest_assembly_versions = curate.read_latest_assembly_versions(genbank_mirror)
-    sync_array = os.path.join(genbank_mirror, ".info", "slurm", "sync_array.txt")
+    sync_array = os.path.join(genbank_mirror, ".info", "slurm", "grab_genomes_array.txt")
     print('Generating {}'.format(sync_array))
     new_genomes = get_new_genome_list(genbank_mirror, latest_assembly_versions)
     args = []

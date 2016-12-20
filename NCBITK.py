@@ -9,12 +9,11 @@ from time import sleep, strftime
 from ftp_functions.ftp_functions import ftp_login, ftp_complete_species_list 
 
 def parallel(genbank_mirror):
-    paths = curate.instantiate_path_vars(genbank_mirror)
-    get_latest_job_id = prun.get_latest(genbank_mirror, paths)
-    prun.update_genomes(genbank_mirror, get_latest_job_id)
-    #dependency_id = update_genomes(genbank_mirror, get_latest_job_id)
-#   cmd = 'python /common/contrib/tools/NCBITK/sync/rename.py {}'.format(genbank_mirror)
-#   salloc(cmd, dependency_id)
+    path_vars = curate.instantiate_path_vars(genbank_mirror)
+    get_latest_job_id = prun.get_latest(genbank_mirror, path_vars)
+    prun.update_genomes(genbank_mirror, path_vars, get_latest_job_id)
+    #  cmd = 'python /common/contrib/tools/NCBITK/sync/rename.py {}'.format(genbank_mirror)
+    #  salloc(cmd, dependency_id)
 
 def main():
     parser = argparse.ArgumentParser()
