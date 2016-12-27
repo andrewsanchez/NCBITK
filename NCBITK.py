@@ -12,23 +12,18 @@ def parallel(genbank_mirror):
     path_vars = curate.instantiate_path_vars(genbank_mirror)
     get_latest_job_id = prun.get_latest(genbank_mirror, path_vars)
     prun.update_genomes(genbank_mirror, path_vars, get_latest_job_id)
-    #  cmd = 'python /common/contrib/tools/NCBITK/sync/rename.py {}'.format(genbank_mirror)
-    #  salloc(cmd, dependency_id)
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("genbank_mirror", help = "Directory to save fastas", type=str)
-    parser.add_argument("-p", "--parallel", help = 'Submit jobs in parallel via SLURM arrays.', action="store_true")
-    parser.add_argument("-s", "--sync", action="store_true")
+    parser.add_argument("-p", "--slurm", help = 'Submit jobs in parallel via SLURM arrays.', action="store_true")
     args = parser.parse_args()
 
     genbank_mirror = args.genbank_mirror
     curate.clean_up(genbank_mirror)
     path_vars = curate.instantiate_path_vars(genbank_mirror)
 
-    if args.parallel:
+    if args.slurm:
         parallel(genbank_mirror)
-    elif args.sync:
-        update_genomes(genbank_mirror) # submit this via sbatch in the cron job - make it depend on latest_assembly_versions_script
 
 main()

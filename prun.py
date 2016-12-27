@@ -104,44 +104,45 @@ def get_new_genome_list(genbank_mirror, latest_assembly_versions):
 
 ymd = strftime("%y.%m.%d")
 
-def gen_grab_genomes_script(genbank_mirror, sync_array_job_id):
+def gen_grab_genomes_script(genbank_mirror, grab_genomes_array_job_id):
 
     info_dir, slurm, out = curate.instantiate_path_vars(genbank_mirror)
-    sync_array = os.path.join(slurm, "sync_array.txt")
+    grab_genomes_array = os.path.join(slurm, "grab_genomes_array.txt")
     grab_genomes_script = os.path.join(slurm, 'grab_genomes_script.sbatch')
     out = os.path.join(out, 'grab_genomes%a.out')
     print('Generating {}'.format(grab_genomes_script))
 
-    while not os.path.isfile(sync_array):
+    # Make sure generation of array is complete
+    while not os.path.isfile(grab_genomes_array):
         sleep(10)
     else:
-        sync_array_len = len(list(open(sync_array)))
+        grab_genomes_array_len = len(list(open(grab_genomes_array)))
 
     with open(grab_genomes_script, 'a') as f:
         f.write("#!/bin/sh\n")
-        f.write("#SBATCH --time=04:30\n")
+        f.write("#SBATCH --time=100:00\n")
         f.write("#SBATCH --job-name=grab_genomes\n")
         f.write("#SBATCH --output={}\n".format(out))
-        f.write("#SBATCH --dependency={}\n".format(sync_array_job_id))
-        f.write("#SBATCH --array=1-{}%2\n".format(sync_array_len))
-        f.write('cmd=$(sed -n "$SLURM_ARRAY_TASK_ID"p "{}")\n'.format(sync_array))
+        f.write("#SBATCH --dependency={}\n".format(grab_genomes_array_job_id))
+        f.write("#SBATCH --array=1-{}%2\n".format(grab_genomes_array_len))
+        f.write('cmd=$(sed -n "$SLURM_ARRAY_TASK_ID"p "{}")\n'.format(grab_genomes_array))
         f.write("srun $cmd")
     
-    return grab_genomes_script, sync_array_len
+    return grab_genomes_script, grab_genomes_array_len
 
-def write_grab_genome_commands(genbank_mirror):
+def write_grab_genomes_array(genbank_mirror):
 
     latest_assembly_versions = curate.read_latest_assembly_versions(genbank_mirror)
     sync_array = os.path.join(genbank_mirror, ".info", "slurm", "sync_array.txt")
     print('Generating {}'.format(sync_array))
-    new_genomes = get_new_genome_list(genbank_mirror, latest_assembly_versions)
+    new_genomes = get_new_genomes(genbank_mirror, latest_assembly_versions)
     args = []
     for id in new_genomes:
         species = latest_assembly_versions.loc[id, 'species']
         path = latest_assembly_versions.loc[id, 'dir']
         args.append(','.join([species, id, path]))
 
-    groups = [args[n:n+25] for n in range(0, len(args), 25)] 
+    groups = [args[n:n+2000] for n in range(0, len(args), 2000)] 
     with open(sync_array, "a") as f:
         for group in groups:
             f.write("python /common/contrib/tools/NCBITK/ftp_functions/ftp_functions.py -g {} {}\n".format(genbank_mirror, ' '.join(group)))
@@ -156,15 +157,16 @@ def get_latest(genbank_mirror, path_vars):
     '''
 
     info_dir, slurm, out = path_vars
-    complete_species_list = ftp_functions.ftp_complete_species_list()[:30]
+    complete_species_list = ftp_functions.ftp_complete_species_list()#[:30]
     curate.check_species_dirs(genbank_mirror, complete_species_list)
 
     latest_assembly_versions_array = os.path.join(slurm, "latest_assembly_versions_array.txt") # should I unpack these paths as in instantiate_path_vars?
+
     array_len = gen_array(latest_assembly_versions_array,
             'python /common/contrib/tools/NCBITK/ftp_functions/get_latest_assembly_versions.py {}'.format(genbank_mirror),
-            complete_species_list, get_groups(complete_species_list, 10))
+            complete_species_list, get_groups(complete_species_list, 1000))
 
-    latest_assembly_versions_script = gen_sbatch_array_script(path_vars, latest_assembly_versions_array, array_len, 'get_latest', time='01:00')
+    latest_assembly_versions_script = gen_sbatch_array_script(path_vars, latest_assembly_versions_array, array_len, 'get_latest', time='90:00')
     get_latest_job_id = submit_sbatch(latest_assembly_versions_script)
     get_latest_job_id = '{}_{}'.format(get_latest_job_id, array_len)
 
@@ -175,12 +177,13 @@ def update_genomes(genbank_mirror, path_vars, get_latest_job_id):
     info_dir, slurm, out = path_vars
     gen_grab_genomes_sbatch = gen_sbatch_dependent(path_vars, get_latest_job_id,
             'gen_grab_genomes_array',
-            'python /common/contrib/tools/NCBITK/generate_arrays.py -g {}'.format(genbank_mirror))
+            'python /common/contrib/tools/NCBITK/generate_arrays.py -g {}'.format(genbank_mirror),
+            time = '15:00')
 
     # submit the sbatch script that creates the array containing commands for grabbing genomes
-    gen_grab_genomes_job_id = submit_sbatch(gen_grab_genomes_sbatch)
-    #  grab_genomes_script, sync_array_len = gen_grab_genomes_script(genbank_mirror, gen_sync_array_job_id)
-    #  job_id = submit_sbatch(grab_genomes_script)
+    gen_grab_genomes_array_job_id = submit_sbatch(gen_grab_genomes_sbatch)
+    grab_genomes_script, grab_genomes_array_len = gen_grab_genomes_script(genbank_mirror, gen_grab_genomes_array_job_id)
+    job_id = submit_sbatch(grab_genomes_script)
     #  remove_old_genomes(genbank_mirror)
 
 def main():
@@ -189,7 +192,7 @@ def main():
     parser.add_argument("genbank_mirror")
     args = parser.parse_args()
 
-    write_grab_genome_commands(args.genbank_mirror)
+    write_grab_genomes_array(args.genbank_mirror)
 
 if __name__ == "__main__":
     main()

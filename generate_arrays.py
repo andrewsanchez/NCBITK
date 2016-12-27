@@ -8,38 +8,31 @@ import curate
 from re import sub
 from time import strftime, sleep
 
-def get_ids_and_paths(genbank_mirror, latest_assembly_versions):
-
-    species_directories = list(set(latest_assembly_versions['species']))
-
-    local = []
-    latest_ids = []
-    latest_paths = []
-    for species in species_directories:
-        species_dir = os.path.join(genbank_mirror, species)
-        for genome_id in os.listdir(species_dir):
-            genome_id = "_".join(genome_id.split("_")[:2])
-            local.append(genome_id)
-        local_genome_ids = ["_".join(genome_id.split("_")[:2]) for genome_id in os.listdir(species_dir)]
-        latest_genome_ids = latest_assembly_versions.index[latest_assembly_versions['species'] == species].tolist()
-        latest_genome_paths = latest_assembly_versions.dir[latest_assembly_versions['species'] == species].tolist()
-        ids_and_paths = zip(latest_genome_ids, latest_genome_paths)
-
-        return local_genome_ids, ids_and_paths
-
-def get_new_genome_list(genbank_mirror, latest_assembly_versions):
-    
-    local_genome_ids, ids_and_paths = get_ids_and_paths(genbank_mirror, latest_assembly_versions)
-    new_genomes = []
-    for info in ids_and_paths:
-        genome_id = info[0]
-        genome_path = info[1]
-        if genome_id not in local_genome_ids:
-            new_genomes.append(genome_id)
-
-    return new_genomes
-
 ymd = strftime("%y.%m.%d")
+
+def get_local_and_latest(genbank_mirror, latest_assembly_versions):
+
+    species = list(set(latest_assembly_versions['species']))
+    species_dirs = []
+    for name in species:
+        species_dirs.append(os.path.join(genbank_mirror, name))
+
+    print(species_dirs)
+    local_genome_ids = []
+    for species_dir in species_dirs:
+        for local_genome in os.listdir(species_dir):
+            local_genome_id = "_".join(local_genome.split("_")[:2])
+            local_genome_ids.append(local_genome_id)
+
+    #  local_genome_ids = ["_".join(genome_id.split("_")[:2]) for genome_id in os.listdir(species_dir)]
+    latest_genome_ids = latest_assembly_versions.index[latest_assembly_versions['species'] == species].tolist()
+    latest_genome_paths = latest_assembly_versions.dir[latest_assembly_versions['species'] == species].tolist()
+    ids_and_paths = zip(latest_genome_ids, latest_genome_paths)
+    print(local_genome_ids)
+    print(latest_genome_ids)
+    print(latest_genome_paths)
+
+    return local_genome_ids, latest_genome_ids, ids_and_paths
 
 def instantiate_path_vars(genbank_mirror):
     info_dir = os.path.join(genbank_mirror, ".info")
@@ -57,7 +50,7 @@ def gen_latest_assembly_versions_array(genbank_mirror, complete_species_list):
     info_dir, slurm, out = instantiate_path_vars(genbank_mirror)
     latest_assembly_versions_array = os.path.join(slurm, "latest_assembly_versions_array.txt")
     print('Generating {}'.format(latest_assembly_versions_array))
-    groups = [complete_species_list[n:n+10] for n in range(0, len(complete_species_list), 10)]
+    groups = [complete_species_list[n:n+1000] for n in range(0, len(complete_species_list), 1000)]
     with open(latest_assembly_versions_array, "a") as f:
         for group in groups:
             group = ' '.join(group)
@@ -146,24 +139,24 @@ def gen_grab_genomes_script(genbank_mirror, sync_array_job_id):
     
     return grab_genomes_script, sync_array_len
 
-def write_grab_genome_commands(genbank_mirror):
+def write_grab_genomes_array(genbank_mirror):
 
     latest_assembly_versions = curate.read_latest_assembly_versions(genbank_mirror)
-    sync_array = os.path.join(genbank_mirror, ".info", "slurm", "grab_genomes_array.txt")
-    print('Generating {}'.format(sync_array))
-    new_genomes = get_new_genome_list(genbank_mirror, latest_assembly_versions)
+    grab_genomes_array = os.path.join(genbank_mirror, ".info", "slurm", "grab_genomes_array.txt")
+    print('Generating {}'.format(grab_genomes_array))
+    new_genomes = curate.get_new_genomes(genbank_mirror, latest_assembly_versions)
     args = []
-    for id in new_genomes:
-        species = latest_assembly_versions.loc[id, 'species']
-        path = latest_assembly_versions.loc[id, 'dir']
-        args.append(','.join([species, id, path]))
+    for name in new_genomes:
+        species = latest_assembly_versions.loc[name, 'species']
+        path = latest_assembly_versions.loc[name, 'dir']
+        args.append(','.join([species, name, path]))
 
-    groups = [args[n:n+25] for n in range(0, len(args), 25)] 
-    with open(sync_array, "a") as f:
+    groups = [args[n:n+2000] for n in range(0, len(args), 2000)] 
+    with open(grab_genomes_array, "a") as f:
         for group in groups:
             f.write("python /common/contrib/tools/NCBITK/ftp_functions/ftp_functions.py -g {} {}\n".format(genbank_mirror, ' '.join(group)))
 
-    return sync_array
+    return grab_genomes_array
 
 def main():
 
@@ -173,7 +166,7 @@ def main():
     args = parser.parse_args()
 
     if args.grab_genomes:
-        write_grab_genome_commands(args.genbank_mirror)
+        write_grab_genomes_array(args.genbank_mirror)
 
 if __name__ == "__main__":
     main()
