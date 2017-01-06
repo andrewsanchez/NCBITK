@@ -120,7 +120,7 @@ def gen_grab_genomes_script(genbank_mirror, grab_genomes_array_job_id):
 
     with open(grab_genomes_script, 'a') as f:
         f.write("#!/bin/sh\n")
-        f.write("#SBATCH --time=100:00\n")
+        f.write("#SBATCH --time=180:00\n")
         f.write("#SBATCH --job-name=grab_genomes\n")
         f.write("#SBATCH --output={}\n".format(out))
         f.write("#SBATCH --dependency={}\n".format(grab_genomes_array_job_id))

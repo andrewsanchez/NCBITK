@@ -44,7 +44,6 @@ def grab_zipped_genome(genbank_mirror, species, genome_id, genome_path, ext=".fn
     zipped_url = "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/{}/{}".format(genome_path, zipped)
     zipped_dst = os.path.join(genbank_mirror, species, zipped_dst)
     urlretrieve(zipped_url, zipped_dst)
-    print(species,genome_id,genome_path)
 
 def main():
 
@@ -58,6 +57,7 @@ def main():
         for grab_genome_args in args.info:
             grab_genome_args = grab_genome_args.split(',')
             species, genome_id, genome_path = grab_genome_args
+            print(genome_id)
             grab_zipped_genome(args.genbank_mirror, species, genome_id, genome_path)
 
 if __name__ == "__main__":
