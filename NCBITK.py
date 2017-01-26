@@ -4,9 +4,22 @@ import os
 import argparse
 import prun
 import curate
+import sync.sync_genbank as sync
 from re import sub
 from time import sleep, strftime
-from ftp_functions.ftp_functions import ftp_login, ftp_complete_species_list 
+from ftp_functions.ftp_functions import ftp_login, ftp_complete_species_list
+
+def get_resources(genbank_mirror):
+
+    """
+    Get assembly_summary.txt for bacteria and taxonomy dump file.
+    Parse and load into Pandas DataFrames.
+    """
+
+    assembly_summary = sync.get_assembly_summary(genbank_mirror)
+    names = sync.get_species_names(genbank_mirror)
+
+    return assembly_summary, names
 
 def parallel(genbank_mirror):
     path_vars = curate.instantiate_path_vars(genbank_mirror)
@@ -25,5 +38,8 @@ def main():
 
     if args.slurm:
         parallel(genbank_mirror)
+    else:
+        assembly_summary, names = get_resources(genbank_mirror)
+        curate.check_species_dirs_from_taxdmp(genbank_mirror, assembly_summary, names)
 
 main()

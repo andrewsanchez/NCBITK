@@ -2,6 +2,7 @@
 
 import os, argparse, gzip
 import pandas as pd
+import tarfile
 from urllib.request import urlretrieve
 from urllib.error import URLError
 from ftplib import FTP, error_temp
@@ -18,6 +19,28 @@ def get_assembly_summary(genbank_mirror, assembly_summary_url="ftp://ftp.ncbi.nl
     assembly_summary = pd.read_csv(assembly_summary_dst, sep="\t", index_col=0, skiprows=1)
 
     return assembly_summary
+
+def get_species_names(genbank_mirror, taxdump_url="ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz"):
+
+    """
+    Get names.dmp from the taxonomy dump
+    """
+
+    info_dir = os.path.join(genbank_mirror, ".info")
+    taxdump = urlretrieve(taxdump_url)
+    taxdump_tar = tarfile.open(taxdump[0])
+    taxdump_tar.extract('names.dmp', info_dir)
+    names_dmp = os.path.join(genbank_mirror, ".info", 'names.dmp')
+    names = pd.read_csv(names_dmp, sep='\t|', skiprows=3, index_col=0, header=None, usecols=[0,2,6], engine='python', iterator=True)
+    names = pd.concat(chunk[chunk[6] == 'scientific name'] for chunk in names)
+    names.drop(6, axis=1, inplace=True)
+    names.columns = ['species']
+    names.index.name = 'species_taxid'
+    names.species.replace({' ': '_'}, regex=True, inplace=True)
+    names.species.replace({'/': '_'}, regex=True, inplace=True)
+    names.to_csv(names_dmp)
+
+    return names
 
 def check_dirs(genbank_mirror):
 
@@ -84,7 +107,6 @@ def write_latest_assembly_versions(genbank_mirror, species, ftp):
             f.write("{},{},{}\n".format(species, genome_path, accession_id))
 
 def get_latest_assembly_versions(genbank_mirror, complete_species_list, genbank_stats, ymdt):
-
 
     """
     Create DataFrame to represent genbank's directory structure.

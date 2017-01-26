@@ -54,6 +54,16 @@ def check_species_dirs(genbank_mirror, complete_species_list):
         if not os.path.isdir(species_dir):
             os.mkdir(species_dir)
 
+def check_species_dirs_from_taxdmp(genbank_mirror, assembly_summary, names):
+
+    for species_taxid in set(assembly_summary.species_taxid.tolist()):
+        print("taxid:  {}".format(species_taxid))
+        species = names.species.loc[species_taxid]
+        species_dir = os.path.join(genbank_mirror, species)
+        if not os.path.isdir(species_dir):
+            os.mkdir(species_dir)
+            print("Creating directory for {}".format(species))
+
 def remove_old_genomes(genbank_mirror):
 
     info_dir, slurm, out = instantiate_path_vars(genbank_mirror)
@@ -77,7 +87,7 @@ def remove_old_genomes(genbank_mirror):
                 os.remove(os.path.join(genbank_mirror, species, fasta[0]))
 
 def read_latest_assembly_versions(genbank_mirror, ix_col=1):
-    
+
     latest_assembly_versions = os.path.join(genbank_mirror, ".info", "latest_assembly_versions.csv")
     latest_assembly_versions = pd.read_csv(latest_assembly_versions, index_col=ix_col, header=None)
     if ix_col == 1:
