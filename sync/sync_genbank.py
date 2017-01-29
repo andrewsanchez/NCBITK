@@ -187,12 +187,13 @@ def check_local_genomes(genbank_mirror, species, local_genome_ids, latest_genome
             fasta = glob("{}*".format(genome_id))
             os.remove(os.path.join(genbank_mirror, species, fasta[0]))
 
-def sync_latest_genomes(genbank_mirror, species, local_genome_ids, ids_and_paths, genbank_stats):
+def sync_latest_genomes(genbank_mirror, assembly_summary, names, species, local_genome_ids, ids_and_paths, genbank_stats):
 
-    for info in ids_and_paths:
-        genome_id = info[0]
-        genome_path = info[1]
-        print(genome_id, genome_path)
+    species_directories = os.listdir(genbank_mirror)
+
+    for species in species_directories:
+        local_genome_ids = get_local_genome_ids(species_dir)
+
         if genome_id not in local_genome_ids:
             try:
                 grab_zipped_genome(genbank_mirror, species, genome_id, genome_path)
@@ -204,13 +205,18 @@ def sync_latest_genomes(genbank_mirror, species, local_genome_ids, ids_and_paths
             with open(genbank_stats, "a") as stats:
                 stats.write("{} downloaded\n".format(genome_id))
 
+def get_local_genome_ids(species):
+
+        local_genome_ids = ["_".join(genome_id.split("_")[:2]) for genome_id in os.listdir(species_dir)]
+
+        return local_genome_ids
+
 def grab_and_organize_genomes(genbank_mirror, genbank_stats, latest_assembly_versions):
 
-    species_directories = list(set(latest_assembly_versions.index))
+    species_directories = os.listdir(genbank_mirror)
 
     for species in species_directories:
-        species_dir = check_species_dirs(genbank_mirror, species)
-        local_genome_ids = ["_".join(genome_id.split("_")[:2]) for genome_id in os.listdir(species_dir)]
+        local_genome_ids = get_local_genome_ids(species_dir)
         latest_genome_ids = [sub("[\[\]']", "", str(i)) for i in latest_assembly_versions.loc[species, ["id"]].values.tolist()]
         latest_genome_paths = [sub("[\[\]']", "", str(i)) for i in latest_assembly_versions.loc[species, ["dir"]].values.tolist()]
         ids_and_paths = zip(latest_genome_ids, latest_genome_paths)

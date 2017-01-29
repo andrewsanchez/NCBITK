@@ -40,6 +40,7 @@ def main():
         parallel(genbank_mirror)
     else:
         assembly_summary, names = get_resources(genbank_mirror)
-        curate.check_species_dirs_from_taxdmp(genbank_mirror, assembly_summary, names)
+        species_taxids = curate.get_species_taxids(assembly_summary)
+        curate.check_species_dirs_from_taxdmp(genbank_mirror, species_taxids, names)
 
 main()
