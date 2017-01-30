@@ -61,6 +61,7 @@ def sync_latest_genomes(genbank_mirror, assembly_summary, names):
         # local_genome_ids = get_local_genome_ids(species_dir)
         # if genome_id not in local_genome_ids:
 
+    x = 1
     for accession in assembly_summary.index:
         genome_id, genome_url = get_genome_id_and_url(assembly_summary, accession)
         taxid = assembly_summary.species_taxid.loc[accession]
@@ -77,7 +78,9 @@ def sync_latest_genomes(genbank_mirror, assembly_summary, names):
             with open(genbank_stats, "a") as stats:
                 stats.write("URLError for {}\n".format(genome_id))
 
-        print("Download {}".format(genome_url))
+        print("Downloaded {}".format(genome_url))
+        print("{} out of {} total genomes".format(x, len(assembly_summary)))
+        x += 1
 
 def main():
 
