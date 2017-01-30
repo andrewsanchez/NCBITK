@@ -1,6 +1,53 @@
 import os
+import tarfile
 import pandas as pd
 from re import sub
+from urllib.request import urlretrieve
+from urllib.error import URLError
+
+def get_assembly_summary(genbank_mirror, assembly_summary_url="ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt"):
+
+    """Get current version of assembly_summary.txt and load into DataFrame"""
+
+    assembly_summary_dst = os.path.join(genbank_mirror, ".info", "assembly_summary.txt")
+    urlretrieve(assembly_summary_url, assembly_summary_dst)
+    assembly_summary = pd.read_csv(assembly_summary_dst, sep="\t", index_col=0, skiprows=1)
+
+    return assembly_summary
+
+def get_species_names(genbank_mirror, taxdump_url="ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz"):
+
+    """
+    Get names.dmp from the taxonomy dump
+    """
+
+    info_dir = os.path.join(genbank_mirror, ".info")
+    taxdump = urlretrieve(taxdump_url)
+    taxdump_tar = tarfile.open(taxdump[0])
+    taxdump_tar.extract('names.dmp', info_dir)
+    names_dmp = os.path.join(genbank_mirror, ".info", 'names.dmp')
+    names = pd.read_csv(names_dmp, sep='\t|', skiprows=3, index_col=0, header=None, usecols=[0,2,6], engine='python', iterator=True)
+    names = pd.concat(chunk[chunk[6] == 'scientific name'] for chunk in names)
+    names.drop(6, axis=1, inplace=True)
+    names.columns = ['species']
+    names.index.name = 'species_taxid'
+    names.species.replace({' ': '_'}, regex=True, inplace=True)
+    names.species.replace({'/': '_'}, regex=True, inplace=True)
+    names.to_csv(names_dmp)
+
+    return names
+
+def get_resources(genbank_mirror):
+
+    """
+    Get assembly_summary.txt for bacteria and taxonomy dump file.
+    Parse and load into Pandas DataFrames.
+    """
+
+    assembly_summary = get_assembly_summary(genbank_mirror)
+    names = get_species_names(genbank_mirror)
+
+    return assembly_summary.head(), names
 
 def instantiate_path_vars(genbank_mirror):
 
@@ -92,59 +139,11 @@ def remove_old_genomes(genbank_mirror):
                 fasta = glob("{}*".format(genome_id))
                 os.remove(os.path.join(genbank_mirror, species, fasta[0]))
 
-def read_latest_assembly_versions(genbank_mirror, ix_col=1):
+def get_local_genome_ids(species_list):
 
-    latest_assembly_versions = os.path.join(genbank_mirror, ".info", "latest_assembly_versions.csv")
-    latest_assembly_versions = pd.read_csv(latest_assembly_versions, index_col=ix_col, header=None)
-    if ix_col == 1:
-        latest_assembly_versions.columns = ['species', 'dir']
-    elif ix_col == 0:
-        latest_assembly_versions.columns = ['id', 'dir']
-
-    return latest_assembly_versions
-
-#  def get_ids_and_paths(latest_assembly_versions):
-
-    #  species_directories = list(set(latest_assembly_versions.index))
-
-    #  for species in species_directories:
-        #  species_dir = os.path.join(genbank_mirror, species)
-        #  local_genome_ids = ["_".join(genome_id.split("_")[:2]) for genome_id in os.listdir(species_dir)]
-        #  latest_genome_ids = [sub("[\[\]']", "", str(i)) for i in latest_assembly_versions.loc[species, ["id"]].values.tolist()]
-        #  latest_genome_paths = [sub("[\[\]']", "", str(i)) for i in latest_assembly_versions.loc[species, ["dir"]].values.tolist()]
-        #  ids_and_paths = zip(latest_genome_ids, latest_genome_paths)
-        #  print('local:  {}'.format(len(local_genome_ids)))
-        #  print('latest:  {}'.format(len(latest_genome_ids)))
-
-        #  return ids_and_paths
-
-def get_new_genomes(genbank_mirror, latest_assembly_versions):
-
-    new_genomes = []
-    species_directories = list(set(latest_assembly_versions['species']))
-    for species in species_directories:
-        species_dir = os.path.join(genbank_mirror, species)
         local_genome_ids = ["_".join(genome_id.split("_")[:2]) for genome_id in os.listdir(species_dir)]
-        latest_genome_ids = latest_assembly_versions.index[latest_assembly_versions['species'] == species].tolist()
-        latest_genome_paths = latest_assembly_versions.dir[latest_assembly_versions['species'] == species].tolist()
-        for name in latest_genome_ids:
-            if name not in local_genome_ids:
-                new_genomes.append(name)
 
-    return new_genomes
-
-
-#  def get_new_genome_list(latest_assembly_versions):
-    
-    #  ids_and_paths = get_ids_and_paths(latest_assembly_versions)
-    #  new_genomes = []
-    #  for info in ids_and_paths:
-        #  genome_id = info[0]
-        #  genome_path = info[1]
-        #  if genome_id not in local_genome_ids:
-            #  new_genomes.append(genome_id)
-
-    #  return new_genomes
+        return local_genome_ids
 
 def check_local_genomes(genbank_mirror, species, local_genome_ids, latest_genome_ids):
 
