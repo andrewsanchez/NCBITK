@@ -56,24 +56,28 @@ def get_genome_id_and_url(assembly_summary, accession):
 
 def sync_latest_genomes(genbank_mirror, assembly_summary, names):
 
+    # TODO: create `def new_genomes(genbank_mirror, assembly_summary)`  and pass its return value as an arg here
+
         # local_genome_ids = get_local_genome_ids(species_dir)
         # if genome_id not in local_genome_ids:
-    genbank_stats = os.path.join(genbank_mirror, 'stats.log')
 
     for accession in assembly_summary.index:
         genome_id, genome_url = get_genome_id_and_url(assembly_summary, accession)
         taxid = assembly_summary.species_taxid.loc[accession]
         species = names.species.loc[taxid]
+
         try:
+            grab_zipped_genome(genbank_mirror, species, genome_id, genome_url)
+        except error_temp:
+            sleep(30)
             grab_zipped_genome(genbank_mirror, species, genome_id, genome_url)
         except URLError:
             grab_zipped_genome(genbank_mirror, species, genome_id, genome_url, ext=".fasta.gz")
         except URLError:
             with open(genbank_stats, "a") as stats:
                 stats.write("URLError for {}\n".format(genome_id))
+
         print("Download {}".format(genome_url))
-        with open(genbank_stats, "a") as stats:
-            stats.write("{} downloaded\n".format(genome_id))
 
 def main():
 
