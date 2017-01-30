@@ -41,6 +41,9 @@ def main():
     else:
         assembly_summary, names = get_resources(genbank_mirror)
         species_taxids = curate.get_species_taxids(assembly_summary)
-        curate.check_species_dirs_from_taxdmp(genbank_mirror, species_taxids, names)
+        species_list = curate.species_list_from_taxdmp(species_taxids, names)
+        curate.check_species_dirs(genbank_mirror, species_list)
+        sync.sync_latest_genomes(genbank_mirror, assembly_summary_url, names)
+
 
 main()

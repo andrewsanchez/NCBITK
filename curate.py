@@ -46,7 +46,6 @@ def clean_up(genbank_mirror):
             os.remove(f)
             print("removing old {}".format(f))
 
-
 def species_list_from_taxdmp(species_taxids, names):
 
     species_list = []
@@ -56,29 +55,20 @@ def species_list_from_taxdmp(species_taxids, names):
 
     return species_list
 
-def check_species_dirs(genbank_mirror, complete_species_list):
+def check_species_dirs(genbank_mirror, species_list):
 
     print('Checking directories for each species in complete_species_list')
 
-    for species in complete_species_list:
+    for species in species_list:
         species_dir = os.path.join(genbank_mirror, species)
         if not os.path.isdir(species_dir):
             os.mkdir(species_dir)
 
 def get_species_taxids(assembly_summary):
 
-    species_taxids = set(assembly_summary.species_taxid.tolist()):
+    species_taxids = set(assembly_summary.species_taxid.tolist())
 
     return species_taxids
-
-def check_species_dirs_from_taxdmp(genbank_mirror, species_taxids, names):
-
-    for species_taxid in species_taxids:
-        species = names.species.loc[species_taxid]
-        species_dir = os.path.join(genbank_mirror, species)
-        if not os.path.isdir(species_dir):
-            os.mkdir(species_dir)
-            print("Creating directory for {}".format(species))
 
 def remove_old_genomes(genbank_mirror):
 

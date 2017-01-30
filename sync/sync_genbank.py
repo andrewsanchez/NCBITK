@@ -187,23 +187,26 @@ def check_local_genomes(genbank_mirror, species, local_genome_ids, latest_genome
             fasta = glob("{}*".format(genome_id))
             os.remove(os.path.join(genbank_mirror, species, fasta[0]))
 
-def sync_latest_genomes(genbank_mirror, assembly_summary, names, species, local_genome_ids, ids_and_paths, genbank_stats):
+def sync_latest_genomes(genbank_mirror, assembly_summary, names):
 
-    species_directories = os.listdir(genbank_mirror)
+        # local_genome_ids = get_local_genome_ids(species_dir)
+        # if genome_id not in local_genome_ids:
+        #     try:
+        #         grab_zipped_genome(genbank_mirror, species, genome_id, genome_path)
+        #     except URLError:
+        #         grab_zipped_genome(genbank_mirror, species, genome_id, genome_path, ext=".fasta.gz")
+        #     except URLError:
+        #         with open(genbank_stats, "a") as stats:
+        #             stats.write("URLError for {}\n".format(genome_id))
+        #     with open(genbank_stats, "a") as stats:
+        #         stats.write("{} downloaded\n".format(genome_id))
+    for genome in assembly_summary.index:
+        url = assembly_summary.ftp_path[genome]
+        taxid = assembly_summary.species_taxid.loc[genome]
+        species = names.species.loc[species_taxid]
+        dst = os.path.join(genbank_mirror, species, genome)
+        urlretrieve(url, dst)
 
-    for species in species_directories:
-        local_genome_ids = get_local_genome_ids(species_dir)
-
-        if genome_id not in local_genome_ids:
-            try:
-                grab_zipped_genome(genbank_mirror, species, genome_id, genome_path)
-            except URLError:
-                grab_zipped_genome(genbank_mirror, species, genome_id, genome_path, ext=".fasta.gz")
-            except URLError:
-                with open(genbank_stats, "a") as stats:
-                    stats.write("URLError for {}\n".format(genome_id))
-            with open(genbank_stats, "a") as stats:
-                stats.write("{} downloaded\n".format(genome_id))
 
 def get_local_genome_ids(species):
 
