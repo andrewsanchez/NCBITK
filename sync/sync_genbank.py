@@ -71,6 +71,7 @@ def sync_latest_genomes(genbank_mirror, assembly_summary, names):
         except URLError:
             with open(genbank_stats, "a") as stats:
                 stats.write("URLError for {}\n".format(genome_id))
+        print("Download {}".format(genome_url))
         with open(genbank_stats, "a") as stats:
             stats.write("{} downloaded\n".format(genome_id))
 

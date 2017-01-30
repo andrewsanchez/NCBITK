@@ -47,7 +47,7 @@ def get_resources(genbank_mirror):
     assembly_summary = get_assembly_summary(genbank_mirror)
     names = get_species_names(genbank_mirror)
 
-    return assembly_summary.head(), names
+    return assembly_summary, names
 
 def instantiate_path_vars(genbank_mirror):
 
