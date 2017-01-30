@@ -200,13 +200,12 @@ def sync_latest_genomes(genbank_mirror, assembly_summary, names):
         #             stats.write("URLError for {}\n".format(genome_id))
         #     with open(genbank_stats, "a") as stats:
         #         stats.write("{} downloaded\n".format(genome_id))
-    for genome in assembly_summary.index:
+    for genome in assembly_summary.index[:10]:
         url = assembly_summary.ftp_path[genome]
         taxid = assembly_summary.species_taxid.loc[genome]
-        species = names.species.loc[species_taxid]
+        species = names.species.loc[taxid]
         dst = os.path.join(genbank_mirror, species, genome)
         urlretrieve(url, dst)
-
 
 def get_local_genome_ids(species):
 

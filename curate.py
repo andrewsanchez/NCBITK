@@ -53,7 +53,7 @@ def species_list_from_taxdmp(species_taxids, names):
         species = names.species.loc[species_taxid]
         species_list.append(species)
 
-    return species_list
+    return species_list[:10]
 
 def check_species_dirs(genbank_mirror, species_list):
 
