@@ -5,6 +5,24 @@ from re import sub
 from urllib.request import urlretrieve
 from urllib.error import URLError
 
+def clean_up(genbank_mirror):
+
+    info_dir, slurm, out = instantiate_path_vars(genbank_mirror)
+    for d in [genbank_mirror, info_dir, slurm, out]:
+        if not os.path.isdir(d):
+            os.mkdir(d)
+
+    latest_assembly_versions = os.path.join(info_dir, "latest_assembly_versions.csv")
+    latest_assembly_versions_array = os.path.join(slurm, "latest_assembly_versions_array.txt")
+    slurm_script = os.path.join(slurm, "get_latest_assembly_versions.sbatch")
+    sync_array = os.path.join(genbank_mirror, ".info", "slurm", "sync_array.txt")
+    sync_array_script = os.path.join(slurm, 'sync_array_script.sbatch')
+    grab_genomes_script = os.path.join(slurm, 'grab_genomes_script.sbatch')
+    for f in [latest_assembly_versions, latest_assembly_versions_array, slurm_script, sync_array_script, grab_genomes_script, sync_array]:
+        if os.path.isfile(f):
+            os.remove(f)
+            print("removing old {}".format(f))
+
 def get_assembly_summary(genbank_mirror, assembly_summary_url="ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt"):
 
     """Get current version of assembly_summary.txt and load into DataFrame"""
@@ -75,23 +93,7 @@ def instantiate_df(path, cols):
 
     return df
 
-def clean_up(genbank_mirror):
 
-    info_dir, slurm, out = instantiate_path_vars(genbank_mirror)
-    for d in [genbank_mirror, info_dir, slurm, out]:
-        if not os.path.isdir(d):
-            os.mkdir(d)
-
-    latest_assembly_versions = os.path.join(info_dir, "latest_assembly_versions.csv")
-    latest_assembly_versions_array = os.path.join(slurm, "latest_assembly_versions_array.txt")
-    slurm_script = os.path.join(slurm, "get_latest_assembly_versions.sbatch")
-    sync_array = os.path.join(genbank_mirror, ".info", "slurm", "sync_array.txt")
-    sync_array_script = os.path.join(slurm, 'sync_array_script.sbatch')
-    grab_genomes_script = os.path.join(slurm, 'grab_genomes_script.sbatch')
-    for f in [latest_assembly_versions, latest_assembly_versions_array, slurm_script, sync_array_script, grab_genomes_script, sync_array]:
-        if os.path.isfile(f):
-            os.remove(f)
-            print("removing old {}".format(f))
 
 def species_list_from_taxdmp(species_taxids, names):
 
