@@ -1,2 +1,3 @@
-# from NCBITK.config import instantiate_path_vars
 import NCBITK.config as config
+import NCBITK.sync as sync
+import NCBITK.curate as curate
