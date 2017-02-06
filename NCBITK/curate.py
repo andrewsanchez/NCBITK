@@ -6,9 +6,9 @@ from re import sub
 from urllib.request import urlretrieve
 from urllib.error import URLError
 
-def clean_up(genbank_mirror):
+def clean_up(genbank_mirror, path_vars):
 
-    info_dir, slurm, out = instantiate_path_vars(genbank_mirror)
+    info_dir, slurm, out = path_vars
     for d in [genbank_mirror, info_dir, slurm, out]:
         if not os.path.isdir(d):
             os.mkdir(d)

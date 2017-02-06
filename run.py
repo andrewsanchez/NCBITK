@@ -21,8 +21,8 @@ def main():
     args = parser.parse_args()
 
     genbank_mirror = args.genbank_mirror
-    curate.clean_up(genbank_mirror)
     path_vars = config.instantiate_path_vars(genbank_mirror)
+    curate.clean_up(genbank_mirror, path_vars)
     assembly_summary = curate.get_resources(genbank_mirror)
     curate.check_species_dirs(genbank_mirror, assembly_summary)
     local_genomes = curate.get_local_genomes(genbank_mirror)
