@@ -1,5 +1,6 @@
 import os
 import tarfile
+import subprocess
 import pandas as pd
 from re import sub
 from urllib.request import urlretrieve
@@ -33,24 +34,37 @@ def get_assembly_summary(genbank_mirror, assembly_summary_url="ftp://ftp.ncbi.nl
 
     return assembly_summary
 
-def get_species_names(genbank_mirror, taxdump_url="ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz"):
+def update_assembly_summary(genbank_mirror, assembly_summary, names):
+
+    for taxid in names.index:
+        scientific_name = names.scientific_name.loc[taxid]
+        # get the list of indices that share the same species_taxid in assembly_summary
+        ixs = assembly_summary.index[assembly_summary.species_taxid == taxid].tolist()
+        assembly_summary.loc[ixs, 'scientific_name'] = scientific_name
+
+    updated_assembly_summary = os.path.join(genbank_mirror, '.info', 'assembly_summary_updated.csv')
+    assembly_summary.to_csv(updated_assembly_summary)
+
+    return assembly_summary
+
+def get_scientific_names(genbank_mirror, assembly_summary, taxdump_url="ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz"):
 
     """
     Get names.dmp from the taxonomy dump
     """
-
     info_dir = os.path.join(genbank_mirror, ".info")
     taxdump = urlretrieve(taxdump_url)
     taxdump_tar = tarfile.open(taxdump[0])
     taxdump_tar.extract('names.dmp', info_dir)
     names_dmp = os.path.join(genbank_mirror, ".info", 'names.dmp')
-    names = pd.read_csv(names_dmp, sep='\t|', skiprows=3, index_col=0, header=None, usecols=[0,2,6], engine='python', iterator=True)
-    names = pd.concat(chunk[chunk[6] == 'scientific name'] for chunk in names)
-    names.drop(6, axis=1, inplace=True)
-    names.columns = ['species']
+    sed_cmd = "sed -i '/scientific name/!d' {}".format(names_dmp) # we only want rows with the scientific name
+    subprocess.Popen(sed_cmd, shell='True').wait()
+    names = pd.read_csv(names_dmp, sep='\t', index_col=0, header=None, usecols=[0,2])
+    names = names.loc[set(assembly_summary.species_taxid.tolist())]
     names.index.name = 'species_taxid'
-    names.species.replace({' ': '_'}, regex=True, inplace=True)
-    names.species.replace({'/': '_'}, regex=True, inplace=True)
+    names.columns = ['scientific_name']
+    names.scientific_name.replace({' ': '_'}, regex=True, inplace=True)
+    names.scientific_name.replace({'/': '_'}, regex=True, inplace=True)
     names.to_csv(names_dmp)
 
     return names
@@ -63,96 +77,52 @@ def get_resources(genbank_mirror):
     """
 
     assembly_summary = get_assembly_summary(genbank_mirror)
-    names = get_species_names(genbank_mirror)
+    names = get_scientific_names(genbank_mirror, assembly_summary)
+    assembly_summary = update_assembly_summary(genbank_mirror, assembly_summary, names)
 
-    return assembly_summary, names
+    return assembly_summary
 
-def instantiate_path_vars(genbank_mirror):
-
-    info_dir = os.path.join(genbank_mirror, ".info")
-    slurm = os.path.join(info_dir, "slurm")
-    out = os.path.join(slurm, "out")
-
-    return info_dir, slurm, out
-
-def instantiate_log(info_dir):
-
-    log = os.path.join(info_dir, 'genbank.log')
-
-    try:
-        log = pd.read_csv(log, index_col=0)
-    except OSError:
-        log = pd.DataFrame(columns=["Status", "Date"])
-
-    return record
-
-def instantiate_df(path, cols):
-
-    df = pd.read_csv(path, index_col=0, header=None)
-    df.columns = cols
-
-    return df
-
-
-
-def species_list_from_taxdmp(species_taxids, names):
-
-    species_list = []
-    for species_taxid in species_taxids:
-        species = names.species.loc[species_taxid]
-        species_list.append(species)
-
-    return species_list
-
-def check_species_dirs(genbank_mirror, species_list):
+def check_species_dirs(genbank_mirror, assembly_summary):
 
     print('Checking directories for each species in complete_species_list')
 
-    for species in species_list:
+    for species in set(assembly_summary.scientific_name.tolist()):
         species_dir = os.path.join(genbank_mirror, species)
         if not os.path.isdir(species_dir):
             os.mkdir(species_dir)
+        # TODO: also remove directories without any FASTA files
+        # the directories may not actually be empty because of MASH files
 
-def get_species_taxids(assembly_summary):
+def get_local_genomes(genbank_mirror):
 
-    species_taxids = set(assembly_summary.species_taxid.tolist())
+    local_genomes = []
+    for root, dirs, files in os.walk(genbank_mirror):
+        for f in files:
+            if f.startswith('GCA'):
+                genome_id = '_'.join(f.split('_')[:2])
+                local_genomes.append(genome_id)
 
-    return species_taxids
+    return local_genomes
 
-def remove_old_genomes(genbank_mirror):
+def remove_old_genomes(genbank_mirror, assembly_summary, local_genomes):
 
-    info_dir, slurm, out = instantiate_path_vars(genbank_mirror)
-    log = instantiate_log(info_dir)
-    latest_assembly_versions = read_latest_assembly_versions(genbank_mirror)
-    species_directories = list(set(latest_assembly_versions.index))
-    for species in species_directories:
-        species_dir = os.path.join(genbank_mirror, species)
-
-        local_genome_ids = ["_".join(genome_id.split("_")[:2]) for genome_id in os.listdir(species_dir)]
-        latest_genome_ids = latest_assembly_versions.index[latest_assembly_versions['species'] == species].tolist()
-        latest_genome_paths = latest_assembly_versions.dir[latest_assembly_versions['species'] == species].tolist()
-        ids_and_paths = zip(latest_genome_ids, latest_genome_paths)
-        #  latest_genome_ids = [sub("[\[\]']", "", str(i)) for i in latest_assembly_versions.loc[species, ["id"]].values.tolist()]
-        #  latest_genome_paths = [sub("[\[\]']", "", str(i)) for i in latest_assembly_versions.loc[species, ["dir"]].values.tolist()]
-
-
-        for genome_id in local_genome_ids:
-            if genome_id not in latest_genome_ids:
-                fasta = glob("{}*".format(genome_id))
-                os.remove(os.path.join(genbank_mirror, species, fasta[0]))
-
-def get_local_genome_ids(species_list):
-
-        local_genome_ids = ["_".join(genome_id.split("_")[:2]) for genome_id in os.listdir(species_dir)]
-
-        return local_genome_ids
-
-def check_local_genomes(genbank_mirror, species, local_genome_ids, latest_genome_ids):
-
-    for genome_id in local_genome_ids:
-        if genome_id not in latest_genome_ids:
+    for genome_id in local_genomes:
+        if genome_id not in assembly_summary.index.tolist():
+            species = assembly_summary.scientific_name[genome_id]
             fasta = glob("{}*".format(genome_id))
             os.remove(os.path.join(genbank_mirror, species, fasta[0]))
+            print("Removed {}".format(fasta[0]))
+
+def get_new_genome_list(genbank_mirror, assembly_summary, local_genomes):
+
+    new_genomes = []
+    for genome in assembly_summary.index.tolist():
+        if genome not in local_genomes:
+            new_genomes.append(genome)
+
+    print("{} new genomes.".format(len(new_genomes)))
+
+    return new_genomes
 
 def main():
 

@@ -2,9 +2,6 @@
 
 import os
 import argparse
-# import prun
-# import curate
-# import sync.sync_genbank as sync
 from NCBITK import config
 from NCBITK import sync
 from NCBITK import curate
@@ -26,10 +23,11 @@ def main():
     genbank_mirror = args.genbank_mirror
     curate.clean_up(genbank_mirror)
     path_vars = config.instantiate_path_vars(genbank_mirror)
-    assembly_summary, names = curate.get_resources(genbank_mirror)
-    species_taxids = curate.get_species_taxids(assembly_summary)
-    species_list = curate.species_list_from_taxdmp(species_taxids, names)
-    curate.check_species_dirs(genbank_mirror, species_list)
-    sync.sync_latest_genomes(genbank_mirror, assembly_summary, names)
+    assembly_summary = curate.get_resources(genbank_mirror)
+    curate.check_species_dirs(genbank_mirror, assembly_summary)
+    local_genomes = curate.get_local_genomes(genbank_mirror)
+    remove_old_genomes(genbank_mirror, assembly_summary, local_genomes)
+    new_genomes = curate.get_new_genome_list(genbank_mirror, assembly_summary, local_genomes)
+    sync.sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes)
 
 main()

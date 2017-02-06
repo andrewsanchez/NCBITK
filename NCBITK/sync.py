@@ -7,6 +7,8 @@ from urllib.request import urlretrieve
 from urllib.error import URLError
 from ftplib import FTP, error_temp
 from time import strftime, sleep
+
+
 from glob import glob
 from re import sub
 
@@ -53,19 +55,12 @@ def get_genome_id_and_url(assembly_summary, accession):
 
     return genome_id, genome_url
 
-
-def sync_latest_genomes(genbank_mirror, assembly_summary, names):
-
-    # TODO: create `def new_genomes(genbank_mirror, assembly_summary)`  and pass its return value as an arg here
-
-        # local_genome_ids = get_local_genome_ids(species_dir)
-        # if genome_id not in local_genome_ids:
+def sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes):
 
     x = 1
-    for accession in assembly_summary.index:
+    for accession in new_genomes:
         genome_id, genome_url = get_genome_id_and_url(assembly_summary, accession)
-        taxid = assembly_summary.species_taxid.loc[accession]
-        species = names.species.loc[taxid]
+        species = assembly_summary.scientific_name.loc[accession]
 
         try:
             grab_zipped_genome(genbank_mirror, species, genome_id, genome_url)
@@ -79,7 +74,7 @@ def sync_latest_genomes(genbank_mirror, assembly_summary, names):
                 stats.write("URLError for {}\n".format(genome_id))
 
         print("Downloaded {}".format(genome_url))
-        print("{} out of {} total genomes".format(x, len(assembly_summary)))
+        print("{} out of {} total new genomes".format(x, len(new_genomes)))
         x += 1
 
 def main():
