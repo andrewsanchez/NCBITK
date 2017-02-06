@@ -26,7 +26,7 @@ def main():
     assembly_summary = curate.get_resources(genbank_mirror)
     curate.check_species_dirs(genbank_mirror, assembly_summary)
     local_genomes = curate.get_local_genomes(genbank_mirror)
-    remove_old_genomes(genbank_mirror, assembly_summary, local_genomes)
+    curate.remove_old_genomes(genbank_mirror, assembly_summary, local_genomes)
     new_genomes = curate.get_new_genome_list(genbank_mirror, assembly_summary, local_genomes)
     sync.sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes)
 
