@@ -109,7 +109,6 @@ def remove_old_genomes(genbank_mirror, assembly_summary, local_genomes):
 
     for genome_id in local_genomes:
         if genome_id not in assembly_summary.index.tolist():
-            species = assembly_summary.scientific_name[genome_id]
             fasta = glob.glob("{}/*/{}*".format(genbank_mirror, genome_id))
             os.remove(fasta[0])
             print("Removed {}".format(fasta[0]))
