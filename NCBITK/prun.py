@@ -158,7 +158,7 @@ def get_latest(genbank_mirror, path_vars):
 
     info_dir, slurm, out = path_vars
     complete_species_list = ftp_functions.ftp_complete_species_list()#[:30]
-    curate.check_species_dirs(genbank_mirror, complete_species_list)
+    curate.create_species_dirs(genbank_mirror, complete_species_list)
 
     latest_assembly_versions_array = os.path.join(slurm, "latest_assembly_versions_array.txt") # should I unpack these paths as in instantiate_path_vars?
 

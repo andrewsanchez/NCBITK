@@ -1,16 +1,10 @@
 #!/usr/bin/env python
 
-import os, argparse, gzip
-import pandas as pd
-import tarfile
+import os
+import argparse
 from urllib.request import urlretrieve
 from urllib.error import URLError
-from ftplib import FTP, error_temp
 from time import strftime, sleep
-
-
-from glob import glob
-from re import sub
 
 def grab_zipped_genome(genbank_mirror, species, genome_id, genome_url, ext=".fna.gz"):
 
@@ -22,31 +16,6 @@ def grab_zipped_genome(genbank_mirror, species, genome_id, genome_url, ext=".fna
     zipped_url = "{}/{}".format(genome_url, zipped_path)
     zipped_dst = os.path.join(genbank_mirror, species, zipped_path)
     urlretrieve(zipped_url, zipped_dst)
-
-def unzip_genome(root, f, genome_id):
-
-    """
-    Decompress genome and remove the compressed genome.
-    """
-
-    zipped_src = os.path.join(root, f)
-    zipped = gzip.open(zipped_src)
-    decoded = zipped.read()
-    unzipped = "{}.fasta".format(genome_id)
-    unzipped = os.path.join(root, unzipped)
-    unzipped = open(unzipped, "wb")
-    unzipped.write(decoded)
-    zipped.close()
-    unzipped.close()
-    os.remove(zipped_src)
-
-def unzip_genbank_mirror(genbank_mirror):
-
-    for root, files, dirs, in os.walk(genbank_mirror):
-        for f in files:
-            if f.endswith("gz"):
-                genome_id = "_".join(f.split("_")[:2])
-                unzip_genome(root, zipped_src, genome_id)
 
 def get_genome_id_and_url(assembly_summary, accession):
 
@@ -61,11 +30,10 @@ def sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes):
     for accession in new_genomes:
         genome_id, genome_url = get_genome_id_and_url(assembly_summary, accession)
         species = assembly_summary.scientific_name.loc[accession]
-
         try:
             grab_zipped_genome(genbank_mirror, species, genome_id, genome_url)
         except error_temp:
-            sleep(30)
+            sleep(2)
             grab_zipped_genome(genbank_mirror, species, genome_id, genome_url)
         except URLError:
             grab_zipped_genome(genbank_mirror, species, genome_id, genome_url, ext=".fasta.gz")

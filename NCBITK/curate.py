@@ -1,11 +1,6 @@
 import os
 import glob
-import tarfile
-import subprocess
-import pandas as pd
-from re import sub
-from urllib.request import urlretrieve
-from urllib.error import URLError
+import gzip
 
 def clean_up(genbank_mirror, path_vars):
 
@@ -25,65 +20,7 @@ def clean_up(genbank_mirror, path_vars):
             os.remove(f)
             print("removing old {}".format(f))
 
-def get_assembly_summary(genbank_mirror, assembly_summary_url="ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt"):
-
-    """Get current version of assembly_summary.txt and load into DataFrame"""
-
-    assembly_summary_dst = os.path.join(genbank_mirror, ".info", "assembly_summary.txt")
-    urlretrieve(assembly_summary_url, assembly_summary_dst)
-    assembly_summary = pd.read_csv(assembly_summary_dst, sep="\t", index_col=0, skiprows=1)
-
-    return assembly_summary
-
-def update_assembly_summary(genbank_mirror, assembly_summary, names):
-
-    for taxid in names.index:
-        scientific_name = names.scientific_name.loc[taxid]
-        # get the list of indices that share the same species_taxid in assembly_summary
-        ixs = assembly_summary.index[assembly_summary.species_taxid == taxid].tolist()
-        assembly_summary.loc[ixs, 'scientific_name'] = scientific_name
-
-    updated_assembly_summary = os.path.join(genbank_mirror, '.info', 'assembly_summary_updated.csv')
-    assembly_summary.to_csv(updated_assembly_summary)
-
-    return assembly_summary
-
-def get_scientific_names(genbank_mirror, assembly_summary, taxdump_url="ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz"):
-
-    """
-    Get names.dmp from the taxonomy dump
-    """
-    info_dir = os.path.join(genbank_mirror, ".info")
-    taxdump = urlretrieve(taxdump_url)
-    taxdump_tar = tarfile.open(taxdump[0])
-    taxdump_tar.extract('names.dmp', info_dir)
-    names_dmp = os.path.join(genbank_mirror, ".info", 'names.dmp')
-    sed_cmd = "sed -i '/scientific name/!d' {}".format(names_dmp) # we only want rows with the scientific name
-    subprocess.Popen(sed_cmd, shell='True').wait()
-    names = pd.read_csv(names_dmp, sep='\t', index_col=0, header=None, usecols=[0,2])
-    names = names.loc[set(assembly_summary.species_taxid.tolist())]
-    names.index.name = 'species_taxid'
-    names.columns = ['scientific_name']
-    names.scientific_name.replace({' ': '_'}, regex=True, inplace=True)
-    names.scientific_name.replace({'/': '_'}, regex=True, inplace=True)
-    names.to_csv(names_dmp)
-
-    return names
-
-def get_resources(genbank_mirror):
-
-    """
-    Get assembly_summary.txt for bacteria and taxonomy dump file.
-    Parse and load into Pandas DataFrames.
-    """
-
-    assembly_summary = get_assembly_summary(genbank_mirror)
-    names = get_scientific_names(genbank_mirror, assembly_summary)
-    assembly_summary = update_assembly_summary(genbank_mirror, assembly_summary, names)
-
-    return assembly_summary
-
-def check_species_dirs(genbank_mirror, assembly_summary):
+def create_species_dirs(genbank_mirror, assembly_summary):
 
     print('Checking directories for each species in complete_species_list')
 
@@ -91,8 +28,6 @@ def check_species_dirs(genbank_mirror, assembly_summary):
         species_dir = os.path.join(genbank_mirror, species)
         if not os.path.isdir(species_dir):
             os.mkdir(species_dir)
-        # TODO: also remove directories without any FASTA files
-        # the directories may not actually be empty because of MASH files
 
 def get_local_genomes(genbank_mirror):
 
@@ -107,11 +42,13 @@ def get_local_genomes(genbank_mirror):
 
 def remove_old_genomes(genbank_mirror, assembly_summary, local_genomes):
 
+    # TODO: there might be a faster way to do this with pandas
     for genome_id in local_genomes:
         if genome_id not in assembly_summary.index.tolist():
-            fasta = glob.glob("{}/*/{}*".format(genbank_mirror, genome_id))
-            os.remove(fasta[0])
-            print("Removed {}".format(fasta[0]))
+            associated_files = glob.glob("{}/*/{}*".format(genbank_mirror, genome_id)) # globs sketch files as well
+            for f in associated_files:
+                os.remove(associated_files)
+                print("Removed {}".format(associated_files))
 
 def get_new_genome_list(genbank_mirror, assembly_summary, local_genomes):
 
@@ -123,6 +60,31 @@ def get_new_genome_list(genbank_mirror, assembly_summary, local_genomes):
     print("{} new genomes.".format(len(new_genomes)))
 
     return new_genomes
+
+def unzip_genome(root, f, genome_id):
+
+    """
+    Decompress genome and remove the compressed genome.
+    """
+
+    zipped_src = os.path.join(root, f)
+    zipped = gzip.open(zipped_src)
+    decoded = zipped.read()
+    unzipped = "{}.fasta".format(genome_id)
+    unzipped = os.path.join(root, unzipped)
+    unzipped = open(unzipped, "wb")
+    unzipped.write(decoded)
+    zipped.close()
+    unzipped.close()
+    os.remove(zipped_src)
+
+def unzip_genbank_mirror(genbank_mirror):
+
+    for root, files, dirs, in os.walk(genbank_mirror):
+        for f in files:
+            if f.endswith("gz"):
+                genome_id = "_".join(f.split("_")[:2])
+                unzip_genome(root, zipped_src, genome_id)
 
 def main():
 
