@@ -4,46 +4,11 @@ import os
 import argparse
 import subprocess
 import pandas as pd
-import curate
+import NCBITK.config as config
 from re import sub
 from time import strftime, sleep
 
 ymd = strftime("%y.%m.%d")
-
-def get_local_and_latest(genbank_mirror, latest_assembly_versions):
-
-    species = list(set(latest_assembly_versions['species']))
-    species_dirs = []
-    for name in species:
-        species_dirs.append(os.path.join(genbank_mirror, name))
-
-    print(species_dirs)
-    local_genome_ids = []
-    for species_dir in species_dirs:
-        for local_genome in os.listdir(species_dir):
-            local_genome_id = "_".join(local_genome.split("_")[:2])
-            local_genome_ids.append(local_genome_id)
-
-    #  local_genome_ids = ["_".join(genome_id.split("_")[:2]) for genome_id in os.listdir(species_dir)]
-    latest_genome_ids = latest_assembly_versions.index[latest_assembly_versions['species'] == species].tolist()
-    latest_genome_paths = latest_assembly_versions.dir[latest_assembly_versions['species'] == species].tolist()
-    ids_and_paths = zip(latest_genome_ids, latest_genome_paths)
-    print(local_genome_ids)
-    print(latest_genome_ids)
-    print(latest_genome_paths)
-
-    return local_genome_ids, latest_genome_ids, ids_and_paths
-
-def instantiate_path_vars(genbank_mirror):
-    info_dir = os.path.join(genbank_mirror, ".info")
-    slurm = os.path.join(info_dir, "slurm")
-    out = os.path.join(slurm, "out")
-    return info_dir, slurm, out
-
-def instantiate_df(path, cols):
-    df = pd.read_csv(path, index_col=0, header=None)
-    df.columns = cols
-    return df
 
 def gen_latest_assembly_versions_array(genbank_mirror, complete_species_list):
 
@@ -62,18 +27,21 @@ def gen_latest_assembly_versions_array(genbank_mirror, complete_species_list):
 def gen_sbatch_script(genbank_mirror, array, job_name, time):
     None
 
-def gen_sbatch_array_script(genbank_mirror, array, job_name, time):
-    info_dir, slurm, out = instantiate_path_vars(genbank_mirror)
+def gen_sbatch_array_script(genbank_mirror, array, job_name, time, chunk=False):
+    info_dir, slurm, out = config.instantiate_path_vars(genbank_mirror)
     out = os.path.join(out, "{}_%a.out".format(job_name))
     sbatch_script = os.path.join(slurm, "{}.sbatch".format(job_name))
     print('Generating {}'.format(sbatch_script))
-    array_len = len(list(open(sbatch_script)))
+    array_len = len(list(open(array)))
     with open(sbatch_script, "a") as f:
         f.write("#!/bin/sh\n")
         f.write("#SBATCH --time={}\n".format(time))
         f.write("#SBATCH --job-name={}\n".format(job_name))
         f.write("#SBATCH --output={}\n".format(out)) # can I remove this line to avoid getting out files?
-        f.write("#SBATCH --array=1-{}%2\n".format(array_len))
+        if chunk:
+            f.write("#SBATCH --array=1-{}%3\n".format(array_len))
+        else:
+            f.write("#SBATCH --array=1-{}\n".format(array_len))
         f.write('cmd=$(sed -n "$SLURM_ARRAY_TASK_ID"p "{}")\n'.format(array))
         f.write("srun $cmd")
 

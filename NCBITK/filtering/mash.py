@@ -14,6 +14,12 @@ def write_sketch_commands(genbank_mirror, assembly_summary, new_genomes):
             species_dir = assembly_summary.scientific_name.loc[genome]
             fasta = os.path.join(genbank_mirror, species_dir, "{}*fasta".format(genome))
             fasta = glob.glob(fasta)
+
+            try:
+                fasta = fasta[0]
+            except IndexError:
+                continue
+
             sketch_dst = os.path.join(genbank_mirror, species_dir, "{}.msh".format(genome))
             cmd = "/common/contrib/bin/mash-Linux64-v1.1.1/mash sketch {} -o {}\n".format(fasta, sketch_dst)
             cmds.write(cmd)

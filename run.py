@@ -25,10 +25,10 @@ def main():
     path_vars = config.instantiate_path_vars(genbank_mirror)
     curate.clean_up(genbank_mirror, path_vars)
     assembly_summary = get_resources.get_resources(genbank_mirror)
+    local_genomes, new_genomes = assess_genbank_mirror(genbank_mirror, assembly_summary)
+    # wrap the following into curate.update_genbank_mirror(genbank_mirror, assembly_summary, local_genomes, new_genomes)
     curate.create_species_dirs(genbank_mirror, assembly_summary)
-    local_genomes = curate.get_local_genomes(genbank_mirror)
     curate.remove_old_genomes(genbank_mirror, assembly_summary, local_genomes)
-    new_genomes = curate.get_new_genome_list(genbank_mirror, assembly_summary, local_genomes)
     sync.sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes)
 
 main()

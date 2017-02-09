@@ -36,13 +36,14 @@ def rename(target_dir, assembly_summary):
 
     for root, dirs, files in os.walk(target_dir):
         for f in files:
-            if f.endswith("fasta"):
-                assembly_summary_id = "_".join(f.split('_')[0:2])
-                if assembly_summary_id in assembly_summary.index:
-                    org_name = assembly_summary.get_value(assembly_summary_id, 'organism_name')
-                    strain = assembly_summary.get_value(assembly_summary_id, 'infraspecific_name')
-                    assembly_level  = assembly_summary.get_value(assembly_summary_id, 'assembly_level')
-                    new_name = '{}_{}_{}_{}.fasta'.format(assembly_summary_id, org_name, strain, assembly_level)
+            if f.startswith("GCA"):
+                # accession_id = "_".join(f.split('_')[0:2])
+                accession_id = re.sub('.fasta', '', f)
+                if accession_id in assembly_summary.index:
+                    org_name = assembly_summary.get_value(accession_id, 'organism_name')
+                    strain = assembly_summary.get_value(accession_id, 'infraspecific_name')
+                    assembly_level  = assembly_summary.get_value(accession_id, 'assembly_level')
+                    new_name = '{}_{}_{}_{}.fasta'.format(accession_id, org_name, strain, assembly_level)
                     rm_words = re.compile( r'((?<=_)(sp|sub|substr|subsp|str|strain)(?=_))' )
                     new_name = rm_words.sub('_', new_name)
                     new_name = re.sub(r'_+', '_', new_name )
@@ -52,6 +53,7 @@ def rename(target_dir, assembly_summary):
                     old = os.path.join(root, f)
                     new = os.path.join(root, new_name)
                     os.rename(old, new)
+                    print("Renamed {} to\n {}".format(old, new))
 
 def main():
     parser = argparse.ArgumentParser()
