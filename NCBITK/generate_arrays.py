@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import os
 import argparse
 import subprocess
@@ -19,15 +17,15 @@ def gen_latest_assembly_versions_array(genbank_mirror, complete_species_list):
     with open(latest_assembly_versions_array, "a") as f:
         for group in groups:
             group = ' '.join(group)
-            f.write("python /common/contrib/tools/NCBITK/ftp_functions/get_latest_assembly_versions.py {} {}\n".format(genbank_mirror, group))
-    array_len = len(list(open(latest_assembly_versions_array)))
+            f.write("python /common/contrib/tools/NCBITK/ftp_functions/get_latest_assembly_versions.py {} {}\n".format(genbank_mirror, group))   array_len = len(list(open(latest_assembly_versions_array)))
 
     return latest_assembly_versions_array, array_len
 
 def gen_sbatch_script(genbank_mirror, array, job_name, time):
     None
 
-def gen_sbatch_array_script(genbank_mirror, array, job_name, time, chunk=False):
+def gen_sbatch_array_script(genbank_mirror, array, job_name, mem, time, chunk=False):
+
     info_dir, slurm, out = config.instantiate_path_vars(genbank_mirror)
     out = os.path.join(out, "{}_%a.out".format(job_name))
     sbatch_script = os.path.join(slurm, "{}.sbatch".format(job_name))
@@ -36,6 +34,7 @@ def gen_sbatch_array_script(genbank_mirror, array, job_name, time, chunk=False):
     with open(sbatch_script, "a") as f:
         f.write("#!/bin/sh\n")
         f.write("#SBATCH --time={}\n".format(time))
+        f.write("#SBATCH --mem={}\n".format(mem))
         f.write("#SBATCH --job-name={}\n".format(job_name))
         f.write("#SBATCH --output={}\n".format(out)) # can I remove this line to avoid getting out files?
         if chunk:
@@ -45,7 +44,7 @@ def gen_sbatch_array_script(genbank_mirror, array, job_name, time, chunk=False):
         f.write('cmd=$(sed -n "$SLURM_ARRAY_TASK_ID"p "{}")\n'.format(array))
         f.write("srun $cmd")
 
-    return sbatch_script 
+    return sbatch_script
 
 def gen_latest_assembly_versions_script(genbank_mirror, latest_assembly_versions_array):
 
@@ -63,7 +62,7 @@ def gen_latest_assembly_versions_script(genbank_mirror, latest_assembly_versions
         f.write('cmd=$(sed -n "$SLURM_ARRAY_TASK_ID"p "{}")\n'.format(latest_assembly_versions_array))
         f.write("srun $cmd")
 
-    return latest_assembly_versions_script 
+    return latest_assembly_versions_script
 
 def gen_sync_array_script(genbank_mirror, get_latest_job_id):
     info_dir, slurm, out = instantiate_path_vars(genbank_mirror)
@@ -79,8 +78,8 @@ def gen_sync_array_script(genbank_mirror, get_latest_job_id):
         f.write("#SBATCH --dependency={}\n".format(get_latest_job_id))
         f.write('cmd="python /common/contrib/tools/NCBITK/slurm/generate_arrays.py {}"\n'.format(genbank_mirror))
         f.write("srun $cmd")
-    
-    return sync_array_script 
+
+    return sync_array_script
 
 def gen_grab_genomes_script(genbank_mirror, sync_array_job_id):
 
@@ -104,7 +103,7 @@ def gen_grab_genomes_script(genbank_mirror, sync_array_job_id):
         f.write("#SBATCH --array=1-{}%2\n".format(sync_array_len))
         f.write('cmd=$(sed -n "$SLURM_ARRAY_TASK_ID"p "{}")\n'.format(sync_array))
         f.write("srun $cmd")
-    
+
     return grab_genomes_script, sync_array_len
 
 def write_grab_genomes_array(genbank_mirror):
@@ -119,7 +118,7 @@ def write_grab_genomes_array(genbank_mirror):
         path = latest_assembly_versions.loc[name, 'dir']
         args.append(','.join([species, name, path]))
 
-    groups = [args[n:n+2000] for n in range(0, len(args), 2000)] 
+    groups = [args[n:n+2000] for n in range(0, len(args), 2000)]
     with open(grab_genomes_array, "a") as f:
         for group in groups:
             f.write("python /common/contrib/tools/NCBITK/ftp_functions/ftp_functions.py -g {} {}\n".format(genbank_mirror, ' '.join(group)))

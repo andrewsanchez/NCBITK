@@ -1,6 +1,7 @@
 import os
 import glob
 import gzip
+import re
 
 def clean_up(genbank_mirror, path_vars):
 
@@ -34,7 +35,7 @@ def get_local_genomes(genbank_mirror):
     local_genomes = []
     for root, dirs, files in os.walk(genbank_mirror):
         for f in files:
-            if f.startswith('GCA'):
+            if f.endswith('fasta'):
                 genome_id = '_'.join(f.split('_')[:2])
                 local_genomes.append(genome_id)
 
@@ -61,12 +62,37 @@ def remove_old_genomes(genbank_mirror, assembly_summary, local_genomes):
                 os.remove(associated_files)
                 print("Removed {}".format(associated_files))
 
+def get_sketch_files(genbank_mirror):
+
+    sketch_files = []
+    for root, dirs, files in os.walk(genbank_mirror):
+        for f in files:
+            if f.endswith('msh'):
+                genome_id = re.sub(r'.msh', '', f)
+                sketch_files.append(genome_id)
+
+    return sketch_files
+
+def get_missing_sketch_files(local_genomes, new_genomes, sketch_files):
+
+    missing_sketch_files = []
+    for genome_id in local_genomes:
+        if genome_id not in sketch_files:
+            missing_sketch_files.append(genome_id)
+
+    for genome_id in new_genomes:
+        missing_sketch_files.append(genome_id)
+
+    return missing_sketch_files
+
 def assess_genbank_mirror(genbank_mirror, assembly_summary):
 
     local_genomes = get_local_genomes(genbank_mirror)
     new_genomes = get_new_genome_list(genbank_mirror, assembly_summary, local_genomes)
+    sketch_files = get_sketch_files(genbank_mirror)
+    missing_sketch_files = get_missing_sketch_files(local_genomes, new_genomes, sketch_files)
 
-    return local_genomes, new_genomes
+    return local_genomes, new_genomes, missing_sketch_files
 
 def unzip_genome(root, f, genome_id):
 

@@ -2,6 +2,7 @@
 
 import os
 import argparse
+import logging
 from NCBITK import config
 from NCBITK import sync
 from NCBITK import curate
