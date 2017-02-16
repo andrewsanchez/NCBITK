@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import logging
 import subprocess
 import pandas as pd
 import tarfile
@@ -18,6 +19,8 @@ def get_assembly_summary(genbank_mirror, fetch_new=True, assembly_summary_url="f
 
     else:
         assembly_summary = pd.read_csv(assembly_summary_dst, index_col=0)
+
+    logging.info('Updated {}'.format(assembly_summary_dst))
 
     return assembly_summary
 
@@ -53,6 +56,8 @@ def get_scientific_names(genbank_mirror, assembly_summary, taxdump_url="ftp://ft
     names.scientific_name.replace({' ': '_'}, regex=True, inplace=True)
     names.scientific_name.replace({'/': '_'}, regex=True, inplace=True)
     names.to_csv(names_dmp)
+
+    logging.info('Updated {}'.format(names_dmp))
 
     return names
 

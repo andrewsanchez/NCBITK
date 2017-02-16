@@ -10,7 +10,7 @@ ymd = strftime("%y.%m.%d")
 
 def gen_latest_assembly_versions_array(genbank_mirror, complete_species_list):
 
-    info_dir, slurm, out = instantiate_path_vars(genbank_mirror)
+    info_dir, slurm, out, log_file = instantiate_path_vars(genbank_mirror)
     latest_assembly_versions_array = os.path.join(slurm, "latest_assembly_versions_array.txt")
     print('Generating {}'.format(latest_assembly_versions_array))
     groups = [complete_species_list[n:n+1000] for n in range(0, len(complete_species_list), 1000)]
@@ -26,7 +26,7 @@ def gen_sbatch_script(genbank_mirror, array, job_name, time):
 
 def gen_sbatch_array_script(genbank_mirror, array, job_name, mem, time, chunk=False):
 
-    info_dir, slurm, out = config.instantiate_path_vars(genbank_mirror)
+    info_dir, slurm, out, log_file = config.instantiate_path_vars(genbank_mirror)
     out = os.path.join(out, "{}_%a.out".format(job_name))
     sbatch_script = os.path.join(slurm, "{}.sbatch".format(job_name))
     print('Generating {}'.format(sbatch_script))
@@ -48,7 +48,7 @@ def gen_sbatch_array_script(genbank_mirror, array, job_name, mem, time, chunk=Fa
 
 def gen_latest_assembly_versions_script(genbank_mirror, latest_assembly_versions_array):
 
-    info_dir, slurm, out = instantiate_path_vars(genbank_mirror)
+    info_dir, slurm, out, log_file = instantiate_path_vars(genbank_mirror)
     out = os.path.join(out, "get_latest_%a.out")
     latest_assembly_versions_script = os.path.join(slurm, "get_latest_assembly_versions.sbatch")
     print('Generating {}'.format(latest_assembly_versions_script))
@@ -65,7 +65,7 @@ def gen_latest_assembly_versions_script(genbank_mirror, latest_assembly_versions
     return latest_assembly_versions_script
 
 def gen_sync_array_script(genbank_mirror, get_latest_job_id):
-    info_dir, slurm, out = instantiate_path_vars(genbank_mirror)
+    info_dir, slurm, out, log_file = instantiate_path_vars(genbank_mirror)
     sync_array_script = os.path.join(slurm, 'sync_array_script.sbatch')
     print('Generating {}'.format(sync_array_script))
 
@@ -83,7 +83,7 @@ def gen_sync_array_script(genbank_mirror, get_latest_job_id):
 
 def gen_grab_genomes_script(genbank_mirror, sync_array_job_id):
 
-    info_dir, slurm, out = instantiate_path_vars(genbank_mirror)
+    info_dir, slurm, out, log_file = instantiate_path_vars(genbank_mirror)
     sync_array = os.path.join(slurm, "sync_array.txt")
     grab_genomes_script = os.path.join(slurm, 'grab_genomes_script.sbatch')
     out = os.path.join(out, 'grab_genomes%a.out')
