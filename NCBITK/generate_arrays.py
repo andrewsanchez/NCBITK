@@ -8,26 +8,14 @@ from time import strftime, sleep
 
 ymd = strftime("%y.%m.%d")
 
-def gen_latest_assembly_versions_array(genbank_mirror, complete_species_list):
-
-    info_dir, slurm, out, log_file = instantiate_path_vars(genbank_mirror)
-    latest_assembly_versions_array = os.path.join(slurm, "latest_assembly_versions_array.txt")
-    print('Generating {}'.format(latest_assembly_versions_array))
-    groups = [complete_species_list[n:n+1000] for n in range(0, len(complete_species_list), 1000)]
-    with open(latest_assembly_versions_array, "a") as f:
-        for group in groups:
-            group = ' '.join(group)
-            f.write("python /common/contrib/tools/NCBITK/ftp_functions/get_latest_assembly_versions.py {} {}\n".format(genbank_mirror, group))   array_len = len(list(open(latest_assembly_versions_array)))
-
-    return latest_assembly_versions_array, array_len
-
 def gen_sbatch_script(genbank_mirror, array, job_name, time):
     None
 
 def gen_sbatch_array_script(genbank_mirror, array, job_name, mem, time, chunk=False):
 
     info_dir, slurm, out, log_file = config.instantiate_path_vars(genbank_mirror)
-    out = os.path.join(out, "{}_%a.out".format(job_name))
+    out = os.path.join(out, "{}_%A_%a.out".format(job_name))
+    print(job_name)
     sbatch_script = os.path.join(slurm, "{}.sbatch".format(job_name))
     print('Generating {}'.format(sbatch_script))
     array_len = len(list(open(array)))
