@@ -24,7 +24,7 @@ def get_genome_id_and_url(assembly_summary, accession):
 
     return genome_id, genome_url
 
-def sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes):
+def sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes, logger):
 
     x = 1
     for accession in new_genomes:
@@ -32,16 +32,21 @@ def sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes):
         species = assembly_summary.scientific_name.loc[accession]
         try:
             grab_zipped_genome(genbank_mirror, species, genome_id, genome_url)
-        except error_temp:
+            logger.info("Downloaded {}".format(genome_id))
+        except error_temp as e:
+            logger.exception('error_temp for {}\n{}'.format(genome_id, e))
             sleep(2)
             grab_zipped_genome(genbank_mirror, species, genome_id, genome_url)
-        except URLError:
+            logger.info("Downloaded {}".format(genome_id))
+        except URLError as e:
+            logger.exception('URLError[1] for {}\n{}'.format(genome_id, e))
             grab_zipped_genome(genbank_mirror, species, genome_id, genome_url, ext=".fasta.gz")
-        except URLError:
-            with open(genbank_stats, "a") as stats:
-                stats.write("URLError for {}\n".format(genome_id))
+            logger.info("Downloaded {}".format(genome_id))
+        except URLError as e:
+            logger.exception('URLError[2] for {}\n{}'.format(genome_id, e))
+            continue
 
-        print("Downloaded {}".format(genome_url))
+
         print("{} out of {} total new genomes".format(x, len(new_genomes)))
         x += 1
 

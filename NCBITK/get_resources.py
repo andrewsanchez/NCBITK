@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import logging
 import subprocess
 import pandas as pd
 import tarfile
@@ -17,7 +18,8 @@ def get_assembly_summary(genbank_mirror, fetch_new=True, assembly_summary_url="f
         assembly_summary = pd.read_csv(assembly_summary_dst, sep="\t", index_col=0, skiprows=1)
 
     else:
-        assembly_summary = pd.read_csv(assembly_summary_dst, index_col=0)
+        assembly_summary = pd.read_csv(assembly_summary_dst, sep="\t", index_col=0)
+
 
     return assembly_summary
 
@@ -56,15 +58,20 @@ def get_scientific_names(genbank_mirror, assembly_summary, taxdump_url="ftp://ft
 
     return names
 
-def get_resources(genbank_mirror):
+def get_resources(genbank_mirror, logger, fetch_new=True):
 
     """
     Get assembly_summary.txt for bacteria and taxonomy dump file.
     Parse and load into Pandas DataFrames.
     """
 
-    assembly_summary = get_assembly_summary(genbank_mirror)
-    names = get_scientific_names(genbank_mirror, assembly_summary)
-    assembly_summary = update_assembly_summary(genbank_mirror, assembly_summary, names)
+    assembly_summary = get_assembly_summary(genbank_mirror, fetch_new)
+    logger.info('Got new assembly_summary.txt')
+
+    if fetch_new:
+        names = get_scientific_names(genbank_mirror, assembly_summary)
+        logger.info('Got new taxonomy dump file.')
+        assembly_summary = update_assembly_summary(genbank_mirror, assembly_summary, names)
+        logger.info('Updated assembly_summary.txt')
 
     return assembly_summary

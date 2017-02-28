@@ -1,13 +1,13 @@
+import argparse
 import os
 import glob
 import gzip
+import re
+import logging
 
 def clean_up(genbank_mirror, path_vars):
 
-    info_dir, slurm, out = path_vars
-    for d in [genbank_mirror, info_dir, slurm, out]:
-        if not os.path.isdir(d):
-            os.mkdir(d)
+    info_dir, slurm, out, logger = path_vars
 
     latest_assembly_versions = os.path.join(info_dir, "latest_assembly_versions.csv")
     latest_assembly_versions_array = os.path.join(slurm, "latest_assembly_versions_array.txt")
@@ -15,32 +15,49 @@ def clean_up(genbank_mirror, path_vars):
     sync_array = os.path.join(genbank_mirror, ".info", "slurm", "sync_array.txt")
     sync_array_script = os.path.join(slurm, 'sync_array_script.sbatch')
     grab_genomes_script = os.path.join(slurm, 'grab_genomes_script.sbatch')
+
     for f in [latest_assembly_versions, latest_assembly_versions_array, slurm_script, sync_array_script, grab_genomes_script, sync_array]:
         if os.path.isfile(f):
             os.remove(f)
-            print("removing old {}".format(f))
 
-def create_species_dirs(genbank_mirror, assembly_summary):
+def create_species_dirs(genbank_mirror, assembly_summary, logger, species_list="all"):
 
-    print('Checking directories for each species in complete_species_list')
+    print('Checking directories for each species in species_list')
+    if species_list == "all":
+        species_list = set(assembly_summary.scientific_name.tolist())
 
-    for species in set(assembly_summary.scientific_name.tolist()):
+    for species in species_list:
         species_dir = os.path.join(genbank_mirror, species)
         if not os.path.isdir(species_dir):
             os.mkdir(species_dir)
+            logger.info("Directory created: {}".format(species))
 
 def get_local_genomes(genbank_mirror):
 
     local_genomes = []
+
     for root, dirs, files in os.walk(genbank_mirror):
         for f in files:
-            if f.startswith('GCA'):
+            if f.endswith('fasta'):
                 genome_id = '_'.join(f.split('_')[:2])
                 local_genomes.append(genome_id)
 
     return local_genomes
 
-def remove_old_genomes(genbank_mirror, assembly_summary, local_genomes):
+def get_new_genome_list(genbank_mirror, assembly_summary, local_genomes, species_list="all"):
+
+    new_genomes = []
+
+    if species_list == "all":
+        species_list = assembly_summary.index.tolist()
+
+    for genome in species_list:
+        if genome not in local_genomes:
+            new_genomes.append(genome)
+
+    return new_genomes
+
+def remove_old_genomes(genbank_mirror, assembly_summary, local_genomes, logger):
 
     # TODO: there might be a faster way to do this with pandas
     for genome_id in local_genomes:
@@ -48,18 +65,41 @@ def remove_old_genomes(genbank_mirror, assembly_summary, local_genomes):
             associated_files = glob.glob("{}/*/{}*".format(genbank_mirror, genome_id)) # globs sketch files as well
             for f in associated_files:
                 os.remove(associated_files)
-                print("Removed {}".format(associated_files))
+                logger.info("Removed {}".format(f))
 
-def get_new_genome_list(genbank_mirror, assembly_summary, local_genomes):
+def get_sketch_files(genbank_mirror):
 
-    new_genomes = []
-    for genome in assembly_summary.index.tolist():
-        if genome not in local_genomes:
-            new_genomes.append(genome)
+    sketch_files = []
+    for root, dirs, files in os.walk(genbank_mirror):
+        for f in files:
+            if f.endswith('msh'):
+                genome_id = re.sub(r'.msh', '', f)
+                sketch_files.append(genome_id)
 
-    print("{} new genomes.".format(len(new_genomes)))
+    return sketch_files
 
-    return new_genomes
+def get_missing_sketch_files(local_genomes, new_genomes, sketch_files):
+
+    missing_sketch_files = []
+
+    for genome_id in local_genomes:
+        if genome_id not in sketch_files:
+            missing_sketch_files.append(genome_id)
+
+    for genome_id in new_genomes:
+        missing_sketch_files.append(genome_id)
+
+
+    return missing_sketch_files
+
+def assess_genbank_mirror(genbank_mirror, assembly_summary, species_list="all"):
+
+    local_genomes = get_local_genomes(genbank_mirror)
+    new_genomes = get_new_genome_list(genbank_mirror, assembly_summary, local_genomes, species_list)
+    sketch_files = get_sketch_files(genbank_mirror)
+    missing_sketch_files = get_missing_sketch_files(local_genomes, new_genomes, sketch_files)
+
+    return local_genomes, new_genomes, sketch_files, missing_sketch_files
 
 def unzip_genome(root, f, genome_id):
 
@@ -73,28 +113,34 @@ def unzip_genome(root, f, genome_id):
     unzipped = "{}.fasta".format(genome_id)
     unzipped = os.path.join(root, unzipped)
     unzipped = open(unzipped, "wb")
-    unzipped.write(decoded)
     zipped.close()
-    unzipped.close()
     os.remove(zipped_src)
+    unzipped.write(decoded)
+    unzipped.close()
+    print("Unzipped {}".format(f))
 
 def unzip_genbank_mirror(genbank_mirror):
 
-    for root, files, dirs, in os.walk(genbank_mirror):
+    for root, dirs, files in os.walk(genbank_mirror):
         for f in files:
-            if f.endswith("gz"):
+            if f.endswith("fasta"):
+            # if f.endswith("gz"):
                 genome_id = "_".join(f.split("_")[:2])
-                unzip_genome(root, zipped_src, genome_id)
+                print(f)
+                try:
+                    unzip_genome(root, f, genome_id)
+                except OSError:
+                    continue
 
 def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("genbank_mirror")
-    parser.add_argument("-r", '--remove_old', action='store_true')
     args = parser.parse_args()
 
-    if args.remove_old:
-        remove_old_genomes(args.genbank_mirror)
+    genbank_mirror = args.genbank_mirror
+    path_vars = config.instantiate_path_vars(genbank_mirror)
+    clean_up(genbank_mirror, path_vars)
 
 if __name__ == "__main__":
     main()

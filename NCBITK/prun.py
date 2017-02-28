@@ -26,7 +26,7 @@ def get_groups(in_list, group_size):
 
 def gen_sbatch_dependent(path_vars, dp_id, job_name, cmd, time='01:00'):
 
-    info_dir, slurm, out = path_vars
+    info_dir, slurm, out, log_file = path_vars
     sbatch_dependent_script = os.path.join(slurm, '{}.sbatch'.format(job_name))
     out = os.path.join(out, '{}_%a.out'.format(job_name))
     print('Generating {}'.format(sbatch_dependent_script))
@@ -44,7 +44,7 @@ def gen_sbatch_dependent(path_vars, dp_id, job_name, cmd, time='01:00'):
 
 def gen_sbatch_array_script(path_vars, array, array_len, job_name, time='01:00'):
 
-    info_dir, slurm, out = path_vars
+    info_dir, slurm, out, log_file = path_vars
     out = os.path.join(out, "{}_%a.out".format(job_name))
     sbatch_script = os.path.join(slurm, "{}.sbatch".format(job_name))
     print('Generating {}'.format(sbatch_script))
@@ -106,7 +106,7 @@ ymd = strftime("%y.%m.%d")
 
 def gen_grab_genomes_script(genbank_mirror, grab_genomes_array_job_id):
 
-    info_dir, slurm, out = curate.instantiate_path_vars(genbank_mirror)
+    info_dir, slurm, out, log_file = curate.instantiate_path_vars(genbank_mirror)
     grab_genomes_array = os.path.join(slurm, "grab_genomes_array.txt")
     grab_genomes_script = os.path.join(slurm, 'grab_genomes_script.sbatch')
     out = os.path.join(out, 'grab_genomes%a.out')
@@ -156,7 +156,7 @@ def get_latest(genbank_mirror, path_vars):
     to map the accession IDs of every genome to their respective species directory.
     '''
 
-    info_dir, slurm, out = path_vars
+    info_dir, slurm, out, log_file = path_vars
     complete_species_list = ftp_functions.ftp_complete_species_list()#[:30]
     curate.create_species_dirs(genbank_mirror, complete_species_list)
 
@@ -174,7 +174,7 @@ def get_latest(genbank_mirror, path_vars):
 
 def update_genomes(genbank_mirror, path_vars, get_latest_job_id):
     
-    info_dir, slurm, out = path_vars
+    info_dir, slurm, out, log_file = path_vars
     gen_grab_genomes_sbatch = gen_sbatch_dependent(path_vars, get_latest_job_id,
             'gen_grab_genomes_array',
             'python /common/contrib/tools/NCBITK/generate_arrays.py -g {}'.format(genbank_mirror),
