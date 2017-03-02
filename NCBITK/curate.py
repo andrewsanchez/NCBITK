@@ -123,12 +123,11 @@ def unzip_genbank_mirror(genbank_mirror):
 
     for root, dirs, files in os.walk(genbank_mirror):
         for f in files:
-            if f.endswith("fasta"):
-            # if f.endswith("gz"):
+            if f.endswith("gz"):
                 genome_id = "_".join(f.split("_")[:2])
-                print(f)
                 try:
                     unzip_genome(root, f, genome_id)
+                    print("Unzipped {}".format(genome_id))
                 except OSError:
                     continue
 
