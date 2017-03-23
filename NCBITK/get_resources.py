@@ -36,16 +36,20 @@ def update_assembly_summary(genbank_mirror, assembly_summary, names):
 
     return assembly_summary
 
-def get_scientific_names(genbank_mirror, assembly_summary, taxdump_url="ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz"):
+def get_scientific_names(genbank_mirror, assembly_summary, taxdump_url="ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz", fetch_new=True):
 
     """
     Get names.dmp from the taxonomy dump
     """
+
     info_dir = os.path.join(genbank_mirror, ".info")
-    taxdump = urlretrieve(taxdump_url)
-    taxdump_tar = tarfile.open(taxdump[0])
-    taxdump_tar.extract('names.dmp', info_dir)
     names_dmp = os.path.join(genbank_mirror, ".info", 'names.dmp')
+
+    if fetch_new:
+        taxdump = urlretrieve(taxdump_url)
+        taxdump_tar = tarfile.open(taxdump[0])
+        taxdump_tar.extract('names.dmp', info_dir)
+
     sed_cmd = "sed -i '/scientific name/!d' {}".format(names_dmp) # we only want rows with the scientific name
     subprocess.Popen(sed_cmd, shell='True').wait()
     names = pd.read_csv(names_dmp, sep='\t', index_col=0, header=None, usecols=[0,2])

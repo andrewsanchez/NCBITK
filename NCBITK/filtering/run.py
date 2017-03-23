@@ -7,9 +7,11 @@ from subprocess import Popen
 from shutil import rmtree, move
 from Bio import SeqIO
 from re import findall
-from link_passed_genomes import make_passed_dir, link_passed_genomes
+from pandas.io.parsers import EmptyDataError
+# from link_passed_genomes import make_passed_dir, link_passed_genomes
 
 def clean_up(fasta_dir):
+
     sketch_file = os.path.join(fasta_dir, "all.msh")
     distance_matrix = os.path.join(fasta_dir, "distance_matrix.csv")
     filter_log = os.path.join(fasta_dir, "filter_log.txt")
@@ -38,6 +40,43 @@ def mash(fasta_dir, mash_exe):
 
     return distance_matrix
 
+def pre_process_all(genbank_mirror):
+
+    x = 1
+    total_species = len(os.listdir(genbank_mirror))
+    for d in os.listdir(genbank_mirror):
+        fasta_dir = os.path.join(genbank_mirror, d)
+        info_dir = os.path.join(fasta_dir, "info")
+        all_dist = os.path.join(genbank_mirror, d, "all_dist.msh")
+        if not os.path.isfile(all_dist):
+            try:
+                distance_matrix = pd.read_csv(all_dist, index_col=0, delimiter="\t")
+                clean_up_matrix(info_dir, distance_matrix) # cleans up matrix in place
+                print("Formatted matrix for {}".format(d))
+                print("{} out of {}".format(x, total_species))
+                x += 1
+            except FileNotFoundError:
+                continue
+            except EmptyDataError:
+                continue
+        else:
+            continue
+
+def generate_stats_genbank(genbank_mirror):
+
+    x = 1
+    all_genbank_species = os.listdir(genbank_mirror)
+    for d in all_genbank_species:
+        print("generating stats for {}".format(d))
+        fasta_dir = os.path.join(genbank_mirror, d)
+        info_dir = os.path.join(fasta_dir, "info")
+        distance_matrix_all = os.path.join(info_dir, "distance_matrix_all.csv")
+        stats = os.path.join(info_dir, "stats.csv")
+        if os.path.isfile(distance_matrix_all) and not os.path.isfile(stats):
+            generate_fasta_stats(fasta_dir, pd.read_csv(distance_matrix_all, index_col=0, delimiter="\t"))
+            print("Generated stats for {} out of {}".format(x, len(all_genbank_species)))
+            x += 1
+
 def clean_up_matrix(info, distance_matrix):
 
     """
@@ -53,7 +92,7 @@ def clean_up_matrix(info, distance_matrix):
 
     distance_matrix.index = new_index
     distance_matrix.columns = new_columns
-    distance_matrix.to_csv(os.path.join(info, "distance_matrix.csv"), sep="\t")
+    distance_matrix.to_csv(os.path.join(info, "distance_matrix_all.csv"), sep="\t")
 
 def generate_fasta_stats(fasta_dir, distance_matrix):
 
@@ -76,8 +115,6 @@ def generate_fasta_stats(fasta_dir, distance_matrix):
                     contigs = [ seq.seq for seq in SeqIO.parse(fasta, "fasta") ]
                 except UnicodeDecodeError:
                     print("{} threw UnicodeDecodeError".format(f))
-                    with open(os.path.join(info, "filter_log.txt"), "a") as log:
-                        log.write("{} threw UnicodeDecodeError\n".format(f))
 
                 # Append the total number of contigs to contig_totals
                 contig_totals.append(len(contigs))
@@ -150,7 +187,7 @@ def filter_med_ad(fasta_dir, stats, max_n_count, c_range, s_range, m_range):
             assembly_upper = passed_II["Assembly_Size"].median() + assembly_dev_ref
             summary_df.set_value(filter_ranges, "Assembly_Size", len(failed_assembly_size))
             summary_df.set_value(filter_ranges, "Assembly_Range", "{:.0f}-{:.0f}".format(assembly_lower, assembly_upper))
-            
+
             if len(passed_III) > 5:
                 mash_med_ad = abs(passed_III["MASH"] - passed_III["MASH"].median()).mean()# Median absolute deviation
                 mash_dev_ref = mash_med_ad * m_range
@@ -160,7 +197,7 @@ def filter_med_ad(fasta_dir, stats, max_n_count, c_range, s_range, m_range):
                     if i not in passed_final.index:
                         failed["MASH"][i] = stats["MASH"][i]
                         failed_mash.append(i)
-                    else:
+
                         failed["MASH"][i] = "passed"
 
                 mash_lower = passed_II["MASH"].median() - mash_dev_ref
@@ -308,4 +345,5 @@ def main():
     else:
         mash_stats_and_filter()
 
-main()
+if __name__ == '__main__':
+    main()
