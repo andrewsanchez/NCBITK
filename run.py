@@ -15,17 +15,15 @@ def parallel(genbank_mirror):
     get_latest_job_id = prun.get_latest(genbank_mirror, path_vars)
     prun.update_genomes(genbank_mirror, path_vars, get_latest_job_id)
 
-def update_genbank_mirror(genbank_mirror, species_list, fetch_new=True):
+def update_genbank_mirror(genbank_mirror, species_list="all", fetch_new=True):
 
     path_vars = config.instantiate_path_vars(genbank_mirror)
     info_dir, slurm, out, logger = path_vars
-
     assembly_summary = get_resources.get_resources(genbank_mirror, logger, fetch_new)
-    species_list = curate.get_species_list(assembly_summary, species_list)
     curate.create_species_dirs(genbank_mirror, assembly_summary, logger, species_list)
-    local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = curate.assess_genbank_mirror(genbank_mirror, assembly_summary, species_list)
-    curate.remove_old_genomes(genbank_mirror, assembly_summary, old_genomes, logger)
-    sync.sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes)
+    local_genomes, new_genomes, sketch_files, missing_sketch_files = curate.assess_genbank_mirror(genbank_mirror, assembly_summary, species_list)
+    curate.remove_old_genomes(genbank_mirror, assembly_summary, local_genomes, logger)
+    sync.sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes, logger)
 
     logger.info('{} genomes in assembly_summary.txt'.format(len(assembly_summary)))
     logger.info("{} genomes present in local collection.".format(len(local_genomes)))
@@ -36,13 +34,12 @@ def update_genbank_mirror(genbank_mirror, species_list, fetch_new=True):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("genbank_mirror", help = "Directory to save fastas", type=str)
-    parser.add_argument("-s", "--species", help = 'List of species', default='all')
-    parser.add_argument("-f", "--fetch_new", help = 'Get new assembly_summary and names.dmp', default=True, action="store_true")
+    parser.add_argument("-s", "--species", help = 'List of species', nargs='+', default='all')
     parser.add_argument("-p", "--slurm", help = 'Submit jobs in parallel via SLURM arrays.', action="store_true")
     args = parser.parse_args()
 
     genbank_mirror = args.genbank_mirror
-    update_genbank_mirror(genbank_mirror, args.species, args.fetch_new)
+    update_genbank_mirror(genbank_mirror, args.species)
 
 if __name__ == "__main__":
     main()
