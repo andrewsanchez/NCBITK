@@ -3,12 +3,12 @@
 import os
 import argparse
 import logging
+
 from NCBITK import config
 from NCBITK import sync
 from NCBITK import curate
 from NCBITK import get_resources
-from re import sub
-# from ftp_functions.ftp_functions import ftp_login, ftp_complete_species_list
+
 
 def parallel(genbank_mirror):
     path_vars = config.instantiate_path_vars(genbank_mirror)
@@ -36,10 +36,11 @@ def main():
     parser.add_argument("genbank_mirror", help = "Directory to save fastas", type=str)
     parser.add_argument("-s", "--species", help = 'List of species', nargs='+', default='all')
     parser.add_argument("-p", "--slurm", help = 'Submit jobs in parallel via SLURM arrays.', action="store_true")
+    parser.add_argument("-n", "--fetch_new", help = 'Fetch new assembly_summary.txt and names.dmp', action="store_true", default=True)
     args = parser.parse_args()
 
     genbank_mirror = args.genbank_mirror
-    update_genbank_mirror(genbank_mirror, args.species)
+    update_genbank_mirror(genbank_mirror, args.species, args.fetch_new)
 
 if __name__ == "__main__":
     main()

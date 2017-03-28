@@ -1,0 +1,8 @@
+{
+    "steps": [
+        {
+            "name": "assess-genbank",
+            "script": "scripts/assess-genbank.sh"
+        }
+    ]
+}

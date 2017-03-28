@@ -3,6 +3,7 @@ from NCBITK import curate
 from NCBITK import get_resources
 import unittest
 import os
+import tempfile
 import shutil
 import pandas as pd
 
@@ -11,12 +12,8 @@ class TestCurate(unittest.TestCase):
 
     def setUp(self):
 
-        self.genbank_mirror = "NCBITK/test/resources/genbank_mirror"
+        self.genbank_mirror = tempfile.mkdtemp()
         self.assembly_summary = pd.read_csv('NCBITK/test/resources/assembly_summary.txt', sep="\t", index_col=0)
-
-        if os.path.isdir(self.genbank_mirror):
-            shutil.rmtree(self.genbank_mirror)
-
         self.path_vars = config.instantiate_path_vars(self.genbank_mirror)
         self.info_dir, self.slurm, self.out, self.logger = self.path_vars
 
@@ -54,6 +51,7 @@ class TestCurate(unittest.TestCase):
         self.assertTrue(len(missing_sketch_files) > len(sketch_files))
 
     def test_sync_latest_genomes(self):
+        None
 
     def tearDown(self):
         shutil.rmtree(self.genbank_mirror)
