@@ -21,7 +21,7 @@ def update_genbank_mirror(genbank_mirror, species_list="all", fetch_new=True):
     info_dir, slurm, out, logger = path_vars
     assembly_summary = get_resources.get_resources(genbank_mirror, logger, fetch_new)
     curate.create_species_dirs(genbank_mirror, assembly_summary, logger, species_list)
-    local_genomes, new_genomes, sketch_files, missing_sketch_files = curate.assess_genbank_mirror(genbank_mirror, assembly_summary, species_list)
+    local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = curate.assess_genbank_mirror(genbank_mirror, assembly_summary, species_list)
     curate.remove_old_genomes(genbank_mirror, assembly_summary, local_genomes, logger)
     sync.sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes, logger)
 
@@ -36,11 +36,16 @@ def main():
     parser.add_argument("genbank_mirror", help = "Directory to save fastas", type=str)
     parser.add_argument("-s", "--species", help = 'List of species', nargs='+', default='all')
     parser.add_argument("-p", "--slurm", help = 'Submit jobs in parallel via SLURM arrays.', action="store_true")
-    parser.add_argument("-n", "--fetch_new", help = 'Fetch new assembly_summary.txt and names.dmp', action="store_true", default=True)
+    parser.add_argument("--use_local", help = 'Use local copy new assembly_summary.txt and names.dmp', action="store_true", default=False)
     args = parser.parse_args()
 
     genbank_mirror = args.genbank_mirror
-    update_genbank_mirror(genbank_mirror, args.species, args.fetch_new)
+
+    fetch_new = True
+    if args.use_local:
+        fetch_new = False
+
+    update_genbank_mirror(genbank_mirror, args.species, fetch_new)
 
 if __name__ == "__main__":
     main()

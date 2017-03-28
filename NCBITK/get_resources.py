@@ -69,13 +69,13 @@ def get_resources(genbank_mirror, logger, fetch_new=True):
     Parse and load into Pandas DataFrames.
     """
 
-    assembly_summary = get_assembly_summary(genbank_mirror, fetch_new)
-    logger.info('Got new assembly_summary.txt')
-
     if fetch_new:
+        assembly_summary = get_assembly_summary(genbank_mirror, fetch_new)
+        logger.info('Got new assembly_summary.txt')
+
         names = get_scientific_names(genbank_mirror, assembly_summary)
-        logger.info('Got new taxonomy dump file.')
         assembly_summary = update_assembly_summary(genbank_mirror, assembly_summary, names)
-        logger.info('Updated assembly_summary.txt')
+    else:
+        assembly_summary = get_assembly_summary(genbank_mirror, fetch_new)
 
     return assembly_summary

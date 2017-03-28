@@ -2,7 +2,7 @@
     "steps": [
         {
             "name": "assess-genbank",
-            "script": "scripts/assess-genbank.sh"
+            "script": "NCBITK/scripts/assess-genbank.sh"
         }
     ]
 }

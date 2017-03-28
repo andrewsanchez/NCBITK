@@ -1,6 +1,7 @@
 from NCBITK import config
 from NCBITK import curate
 from NCBITK import get_resources
+
 import unittest
 import os
 import tempfile
@@ -16,7 +17,6 @@ class TestCurate(unittest.TestCase):
         self.assembly_summary = pd.read_csv('NCBITK/test/resources/assembly_summary.txt', sep="\t", index_col=0)
         self.path_vars = config.instantiate_path_vars(self.genbank_mirror)
         self.info_dir, self.slurm, self.out, self.logger = self.path_vars
-
 
         self.species_list_slice = ['Acinetobacter_nosocomialis',
                         'Escherichia_coli',
@@ -41,12 +41,15 @@ class TestCurate(unittest.TestCase):
     def test_assess_genbank_mirror(self):
 
         species_list = self.species_list_slice
-        local_genomes = curate.get_local_genomes(self.genbank_mirror)
-        new_genomes = curate.get_new_genome_list(self.genbank_mirror, self.assembly_summary, local_genomes, species_list)
-        sketch_files = curate.get_sketch_files(self.genbank_mirror)
-        missing_sketch_files = curate.get_missing_sketch_files(local_genomes, new_genomes, sketch_files)
-        old_genomes = curate.get_old_genomes(self.genbank_mirror, self.assembly_summary, local_genomes)
+        # local_genomes = curate.get_local_genomes(self.genbank_mirror)
+        # new_genomes = curate.get_new_genome_list(self.genbank_mirror, self.assembly_summary, local_genomes, species_list)
+        # sketch_files = curate.get_sketch_files(self.genbank_mirror)
+        # missing_sketch_files = curate.get_missing_sketch_files(local_genomes, new_genomes, sketch_files)
+        # old_genomes = curate.get_old_genomes(self.genbank_mirror, self.assembly_summary, local_genomes)
+        genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror, self.assembly_summary, species_list)
+        local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_assessment
         self.assertTrue(len(new_genomes) > len(local_genomes))
+
         self.assertTrue(len(local_genomes) == len(sketch_files))
         self.assertTrue(len(missing_sketch_files) > len(sketch_files))
 
@@ -55,6 +58,9 @@ class TestCurate(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.genbank_mirror)
+
+class TestArrays(unittest.TestCase):
+    None
 
 #     def test_assess_genbank_mirror(self):
 #         None

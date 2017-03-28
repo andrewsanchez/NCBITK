@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python ~/projects/NCBITK/run.py "$@" -s Acinetobacter_nosocomialis
+python ~/projects/NCBITK/run.py "$@" --use_local --species Acinetobacter_nosocomialis
