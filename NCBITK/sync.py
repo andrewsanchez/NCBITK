@@ -46,8 +46,6 @@ def sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes, logger):
             logger.exception('URLError[2] for {}\n{}'.format(genome_id, e))
             continue
 
-
-        print("{} out of {} total new genomes".format(x, len(new_genomes)))
         x += 1
 
 def main():
