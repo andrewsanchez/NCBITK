@@ -53,7 +53,6 @@ def rename(target_dir, assembly_summary):
                     old = os.path.join(root, f)
                     new = os.path.join(root, new_name)
                     os.rename(old, new)
-                    print("Renamed {} to\n {}".format(old, new))
 
 def main():
     parser = argparse.ArgumentParser()
@@ -62,9 +61,7 @@ def main():
     args = parser.parse_args()
     genbank_mirror = args.target_dir
 
-    assembly_summary = get_assembly_summary(genbank_mirror, assembly_summary_url="ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt")
-    unzip_genbank_mirror(genbank_mirror)
-   #rename(genbank_mirror, assembly_summary)
+    rename(genbank_mirror, assembly_summary)
 
 if __name__ == '__main__':
     main()
