@@ -5,7 +5,6 @@ import re
 import argparse
 import glob
 import subprocess
-import NCBITK.pywalk.core as pywalk
 
 def write_sketch_commands(genbank_mirror, assembly_summary, new_genomes):
 
