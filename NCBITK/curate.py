@@ -30,7 +30,6 @@ def get_species_list(assembly_summary, species_list):
 
 def create_species_dirs(genbank_mirror, assembly_summary, logger, species_list):
 
-    print('Checking directories for each species in species_list')
     if species_list == "all":
         species_list = set(assembly_summary.scientific_name.tolist())
 
@@ -138,7 +137,6 @@ def unzip_genome(root, f, genome_id):
     os.remove(zipped_src)
     unzipped.write(decoded)
     unzipped.close()
-    print("Unzipped {}".format(f))
 
 def unzip_genbank_mirror(genbank_mirror):
 
@@ -148,7 +146,6 @@ def unzip_genbank_mirror(genbank_mirror):
                 genome_id = "_".join(f.split("_")[:2])
                 try:
                     unzip_genome(root, f, genome_id)
-                    print("Unzipped {}".format(genome_id))
                 except OSError:
                     continue
 
