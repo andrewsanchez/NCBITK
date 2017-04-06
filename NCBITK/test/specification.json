@@ -3,11 +3,6 @@
         {
             "name": "update-genbank",
             "script": "NCBITK/test/scripts/update-genbank.sh"
-        },
-        {
-            "dependencies": ["update-genbank"],
-            "name": "run-mash",
-            "script": "NCBITK/test/scripts/mash.sh"
         }
     ]
 }
