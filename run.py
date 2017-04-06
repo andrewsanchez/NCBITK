@@ -12,11 +12,12 @@ from NCBITK import rename
 from NCBITK import mash
 
 
-def setUp(genbank_mirror, fetch_new=True):
+def setUp(genbank_mirror, species_list='all', fetch_new=True):
 
     path_vars = config.instantiate_path_vars(genbank_mirror)
     info_dir, slurm, out, logger = path_vars
-     genbank_status = curate.assess_genbank_mirror(genbank_mirror, assembly_summary, species_list)   assembly_summary = get_resources.get_resources(genbank_mirror, logger, fetch_new)
+    assembly_summary = get_resources.get_resources(genbank_mirror, logger, fetch_new)
+    genbank_status = curate.assess_genbank_mirror(genbank_mirror, assembly_summary, species_list)
 
     return path_vars, assembly_summary, genbank_status
 
@@ -37,8 +38,15 @@ def update_genbank_mirror(genbank_mirror, genbank_status, path_vars, assembly_su
     logger.info('{} sketch files present in local collection.'.format(len(sketch_files)))
     logger.info('{} sketch files not in local collection.'.format(len(missing_sketch_files)))
 
-def run_mash(genbank_mirror, genbank_status, assembly_summary, path_vars):
+def run_mash(genbank_mirror, genbank_status, assembly_summary, path_vars, species_list):
+
+    info_dir, slurm, out, logger = path_vars
     local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_status
+    print(missing_sketch_files)
+    mash.write_sketch_commands(genbank_mirror, assembly_summary, new_genomes)
+    mash.sketch(genbank_mirror, assembly_summary, missing_sketch_files)
+    mash.paste(genbank_mirror, assembly_summary, logger, species_list)
+    mash.dist(genbank_mirror, assembly_summary, logger, species_list)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -56,14 +64,13 @@ def main():
         fetch_new = False
 
     genbank_mirror = args.genbank_mirror
-    path_vars, assembly_summary, genbank_status = setUp(genbank_mirror, fetch_new)
+    path_vars, assembly_summary, genbank_status = setUp(genbank_mirror, args.species, fetch_new)
 
     if args.update:
         update_genbank_mirror(genbank_mirror, genbank_status, path_vars, assembly_summary, args.species)
 
     if args.mash:
-        run_mash(genbank_mirror, genbank_status assembly_summary, path_vars)
-        None
+        run_mash(genbank_mirror, genbank_status, assembly_summary, path_vars, args.species)
 
 
 if __name__ == "__main__":
