@@ -12,8 +12,13 @@ class TestSlurmPipeline(unittest.TestCase):
 
     def setUp(self):
 
-        self.genbank_mirror = tempfile.mkdtemp()
-        os.mkdir(os.path.join(self.genbank_mirror, ".info"))
+        # self.genbank_mirror = tempfile.mkdtemp()
+        self.genbank_mirror = '/scratch/aas229/test'
+        self.info_dir = os.path.join(self.genbank_mirror, ".info")
+        os.mkdir(self.genbank_mirror)
+        os.mkdir(self.info_dir)
+        assembly_summary_src = 'NCBITK/test/resources/assembly_summary.txt'
+        shutil.copyfile(assembly_summary_src, os.path.join(self.info_dir, 'assembly_summary.txt'))
         self.specification = 'NCBITK/test/specification.json'
         self.assembly_summary = pd.read_csv('NCBITK/test/resources/assembly_summary.txt', sep="\t", index_col=0)
         self.species_list = 'Acinetobacter_nosocomialis'
@@ -22,16 +27,18 @@ class TestSlurmPipeline(unittest.TestCase):
 
         self.cmd = "slurm-pipeline.py -s {} {}".format(self.specification, self.genbank_mirror)
         subprocess.Popen(self.cmd, shell=True).wait()
+        # os.listdir(os.path.join(self.genbank_mirror, self.species_list))
         self.assertTrue(os.listdir(self.genbank_mirror))
 
-    def test_assess_genbank_mirror(self):
+    # def test_assess_genbank_mirror(self):
 
-        genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror, self.assembly_summary, self.species_list)
-        local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_assessment
+    #     genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror, self.assembly_summary, self.species_list)
+    #     local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_assessment
 
-        self.assertTrue(len(new_genomes) > len(local_genomes))
-        self.assertTrue(len(local_genomes) == len(sketch_files))
-        self.assertTrue(len(missing_sketch_files) > len(sketch_files))
+    #     self.assertTrue(len(new_genomes) > len(local_genomes))
+    #     self.assertTrue(len(local_genomes) == len(sketch_files))
+    #     self.assertTrue(len(missing_sketch_files) > len(sketch_files))
 
-    def tearDown(self):
-        shutil.rmtree(self.genbank_mirror)
+    # def tearDown(self):
+    #     os.listdir(os.path.join(self.genbank_mirror, self.species_list))
+    #     shutil.rmtree(self.genbank_mirror)
