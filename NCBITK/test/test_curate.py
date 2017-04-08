@@ -26,25 +26,30 @@ class TestCurate(unittest.TestCase):
 
         species_list = curate.get_species_list(self.assembly_summary, 'all')
         curate.create_species_dirs(self.genbank_mirror, self.assembly_summary, self.logger, species_list)
-        total_species_assembly_summary = len(set(self.assembly_summary.scientific_name.tolist()))
-        total_species_local = len(os.listdir(self.genbank_mirror))
-        self.assertEqual(total_species_local, total_species_assembly_summary)
+        species_assembly_summary = self.assembly_summary.scientific_name\
+                                   [self.assembly_summary.scientific_name.notnull()]
+        species_assembly_summary = set(species_assembly_summary)
+        local_species = os.listdir(self.genbank_mirror)
+        local_species.remove('.info')
+
+        self.assertEqual(len(local_species), len(species_assembly_summary))
 
     def test_create_species_dirs_list(self):
 
-        species_list = self.species_list_slice
-        species_list = curate.get_species_list(self.assembly_summary, species_list)
+        species_list = curate.get_species_list(self.assembly_summary, self.species_list_slice)
         curate.create_species_dirs(self.genbank_mirror, self.assembly_summary, self.logger, species_list)
-        total_species_local = len([i for i in os.listdir(self.genbank_mirror) if not i.startswith('.')])
-        self.assertEqual(total_species_local, len(species_list))
+        local_species = os.listdir(self.genbank_mirror)
+        local_species.remove('.info')
+
+        self.assertEqual(len(local_species), len(species_list))
 
     def test_assess_genbank_mirror(self):
 
         species_list = self.species_list_slice
         genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror, self.assembly_summary, species_list)
         local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_assessment
-        self.assertTrue(len(new_genomes) > len(local_genomes))
 
+        self.assertTrue(len(new_genomes) > len(local_genomes))
         self.assertTrue(len(local_genomes) == len(sketch_files))
         self.assertTrue(len(missing_sketch_files) > len(sketch_files))
 
