@@ -59,11 +59,12 @@ def main():
         fetch_new = False
 
     genbank_mirror = args.genbank_mirror
-    path_vars, assembly_summary = setup(genbank_mirror, args.species, fetch_new)
-    genbank_status = assess_genbank(genbank_mirror, assembly_summary, args.species)
+    species = args.get_species_list(assembly_summary, args.species)
+    path_vars, assembly_summary = setup(genbank_mirror, species, fetch_new)
+    genbank_status = assess_genbank(genbank_mirror, assembly_summary, species)
 
     if args.update:
-        update(genbank_mirror, genbank_status, path_vars, assembly_summary, args.species)
+        update(genbank_mirror, genbank_status, path_vars, assembly_summary, species)
 
 if __name__ == "__main__":
     main()
