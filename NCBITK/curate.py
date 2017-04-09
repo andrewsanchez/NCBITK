@@ -23,7 +23,9 @@ def clean_up(genbank_mirror, path_vars):
 def get_species_list(assembly_summary, species_list):
 
     if species_list == "all":
-        species_list = set(assembly_summary.scientific_name.tolist())
+
+        species_list = assembly_summary.scientific_name[assembly_summary.scientific_name.notnull()]
+        species_list = set(species_list.tolist())
 
     return species_list
 
