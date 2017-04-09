@@ -26,13 +26,10 @@ class TestCurate(unittest.TestCase):
 
         species_list = curate.get_species_list(self.assembly_summary, 'all')
         curate.create_species_dirs(self.genbank_mirror, self.assembly_summary, self.logger, species_list)
-        species_assembly_summary = self.assembly_summary.scientific_name\
-                                   [self.assembly_summary.scientific_name.notnull()]
-        species_assembly_summary = set(species_assembly_summary)
         local_species = os.listdir(self.genbank_mirror)
         local_species.remove('.info')
 
-        self.assertEqual(len(local_species), len(species_assembly_summary))
+        self.assertEqual(len(local_species), len(species_list))
 
     def test_create_species_dirs_list(self):
 
