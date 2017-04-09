@@ -14,8 +14,8 @@ class TestCurate(unittest.TestCase):
 
     def setUp(self):
 
-        # self.genbank_mirror = tempfile.mkdtemp()
-        self.genbank_mirror = '/Users/andrew/scratch/genbank'
+        self.genbank_mirror = tempfile.mkdtemp()
+        # self.genbank_mirror = '/Users/andrew/scratch/genbank'
         self.assembly_summary = pd.read_csv('NCBITK/test/resources/assembly_summary.txt', sep="\t", index_col=0)
         self.path_vars = config.instantiate_path_vars(self.genbank_mirror)
         self.info_dir, self.slurm, self.out, self.logger = self.path_vars
@@ -61,16 +61,15 @@ class TestCurate(unittest.TestCase):
         genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror, self.assembly_summary, self.species_list)
         local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_assessment
 
-        print(self.genbank_mirror)
         sync.sync_latest_genomes(self.genbank_mirror, self.assembly_summary, new_genomes, self.logger)
-        print(self.genbank_mirror)
+
         genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror, self.assembly_summary, self.species_list)
         local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_assessment
 
         self.assertTrue(len(local_genomes) == len(self.test_genomes))
+        self.assertTrue(len(missing_sketch_files) == len(self.test_genomes))
         self.assertTrue(len(new_genomes) == 0)
         self.assertTrue(len(old_genomes) == 0)
-        self.assertTrue(len(missing_sketch_files) == len(self.test_genomes))
         self.assertTrue(len(sketch_files) == 0)
 
     # def test_assess_after(self):
