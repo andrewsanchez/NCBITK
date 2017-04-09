@@ -50,7 +50,7 @@ def get_local_genomes(genbank_mirror):
 
     for root, dirs, files in os.walk(genbank_mirror):
         for f in files:
-            if f.endswith('fasta'):
+            if f.startswith('GCA'):
                 genome_id = '_'.join(f.split('_')[:2])
                 local_genomes.append(genome_id)
 
@@ -65,7 +65,8 @@ def get_new_genome_list(genbank_mirror, assembly_summary, local_genomes, species
     for species in species_list:
         latest_assembly_versions = assembly_summary.index[assembly_summary.scientific_name == species].tolist()
         for genome in latest_assembly_versions:
-            new_genomes.append(genome)
+            if genome not in local_genomes:
+                new_genomes.append(genome)
 
     return new_genomes
 
