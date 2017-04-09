@@ -4,6 +4,7 @@ import os
 import argparse
 from urllib.request import urlretrieve
 from urllib.error import URLError
+from ftplib import error_temp
 from time import strftime, sleep
 
 def grab_zipped_genome(genbank_mirror, species, genome_id, genome_url, ext=".fna.gz"):
