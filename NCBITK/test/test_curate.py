@@ -5,6 +5,7 @@ from NCBITK import get_resources
 
 import unittest
 import os
+import glob
 import tempfile
 import shutil
 import pandas as pd
@@ -14,7 +15,7 @@ class TestCurate(unittest.TestCase):
 
     def setUp(self):
 
-        self.genbank_mirror = tempfile.mkdtemp()
+        self.genbank_mirror = tempfile.mkdtemp(prefix='Genbank_')
         self.assembly_summary = pd.read_csv('NCBITK/test/resources/assembly_summary.txt', sep="\t", index_col=0)
         self.path_vars = config.instantiate_path_vars(self.genbank_mirror)
         self.info_dir, self.slurm, self.out, self.logger = self.path_vars
@@ -59,18 +60,19 @@ class TestCurate(unittest.TestCase):
 
         genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror, self.assembly_summary, self.species_list)
         local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_assessment
-
-        self.assertTrue(len(self.new_genomes) == len(self.test_genomes))
-        self.assertTrue(len(self.missing_sketch_files) == len(self.test_genomes))
-        self.assertTrue(len(self.sketch_files) == 0)
-        self.assertTrue(len(self.local_genomes) == 0)
-        self.assertTrue(len(self.old_genomes) == 0)
+        before_sync_new_genomes = new_genomes
 
         sync.sync_latest_genomes(self.genbank_mirror, self.assembly_summary, new_genomes, self.logger)
+
+        species_dir = os.path.join(self.genbank_mirror, self.test_species)
+
+        for f in glob.glob('{}/GCA*'.format(species_dir)):
+            self.assertTrue(os.path.isfile(f))
 
         genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror, self.assembly_summary, self.species_list)
         local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_assessment
 
+        self.assertTrue(len(before_sync_new_genomes) == len(local_genomes))
         self.assertTrue(len(local_genomes) == len(self.test_genomes))
         self.assertTrue(len(missing_sketch_files) == len(self.test_genomes))
         self.assertTrue(len(new_genomes) == 0)
@@ -86,6 +88,7 @@ class TestCurate(unittest.TestCase):
         before_sync_new_genomes = new_genomes[:10]
         after_sync_new_genomes = new_genomes[10:]
 
+        # TODO: Already testing this function.  Probably unnecessary
         sync.sync_latest_genomes(self.genbank_mirror, self.assembly_summary, before_sync_new_genomes, self.logger)
 
         genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror, self.assembly_summary, self.species_list)
@@ -98,14 +101,22 @@ class TestCurate(unittest.TestCase):
         self.assertTrue(len(old_genomes) == 0)
         self.assertTrue(len(sketch_files) == 0)
 
-    # def test_remove_old_genomes(self):
-    #     None
+    def test_get_old_genomes(self):
+
+        local_genomes = self.test_genomes
+        not_in_assembly_summary = self.test_genomes[:5].tolist()
+        self.assembly_summary.drop(not_in_assembly_summary, inplace=True)
+
+        old_genomes = curate.get_old_genomes(self.genbank_mirror, self.assembly_summary, local_genomes)
+
+        self.assertTrue(sorted(not_in_assembly_summary) == sorted(old_genomes))
+
 
     # def test_get_resources(self):
     #     None
 
-    def tearDown(self):
-        shutil.rmtree(self.genbank_mirror)
+    # def tearDown(self):
+    #     
 
 class TestArrays(unittest.TestCase):
     None
