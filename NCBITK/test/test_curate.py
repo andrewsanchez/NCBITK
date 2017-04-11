@@ -23,6 +23,7 @@ class TestCurate(unittest.TestCase):
         self.test_species = 'Acinetobacter_nosocomialis'
         self.test_genomes = self.assembly_summary.index[self.assembly_summary.scientific_name == self.test_species]
         self.species_list = curate.get_species_list(self.assembly_summary, [self.test_species])
+        self.species_dir = os.path.join(self.genbank_mirror, self.test_species)
 
         self.genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror, self.assembly_summary, self.species_list)
         self.local_genomes, self.new_genomes,\
@@ -45,6 +46,10 @@ class TestCurate(unittest.TestCase):
         local_species.remove('.info')
 
         self.assertEqual(len(local_species), len(self.species_list))
+
+    def test_create_species_dirs_str(self):
+        None
+        
 
     def test_assess_fresh(self):
 
@@ -111,12 +116,20 @@ class TestCurate(unittest.TestCase):
 
         self.assertTrue(sorted(not_in_assembly_summary) == sorted(old_genomes))
 
+    def test_get_local_genomes(self):
 
-    # def test_get_resources(self):
-    #     None
+        curate.create_species_dirs(self.genbank_mirror, self.assembly_summary, self.logger, self.species_list)
 
-    # def tearDown(self):
-    #     
+        for genome in self.test_genomes:
+            dst = os.path.join(self.species_dir, genome)
+            tempfile.mkstemp(prefix=genome, dir=self.species_dir)
+
+        local_genomes = curate.get_local_genomes(self.genbank_mirror)
+
+        self.assertTrue(len(local_genomes) == len(self.test_genomes))
+
+    def tearDown(self):
+        shutil.rmtree(self.genbank_mirror)
 
 class TestArrays(unittest.TestCase):
     None

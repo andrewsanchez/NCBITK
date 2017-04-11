@@ -29,7 +29,6 @@ def get_species_list(assembly_summary, species_list):
 
     return species_list
 
-
 def create_species_dirs(genbank_mirror, assembly_summary, logger, species_list):
 
     if species_list == "all":
