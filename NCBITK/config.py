@@ -15,10 +15,8 @@ def instantiate_path_vars(genbank_mirror):
         if not os.path.isdir(d):
             os.mkdir(d)
 
-
     log_file = os.path.join(info_dir, 'log_{}.txt'.format(ymd))
     logger = instantiate_logger(log_file)
-    logger.info("Instantiated logger")
 
     return info_dir, slurm, out, logger
 
