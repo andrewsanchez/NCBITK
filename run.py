@@ -15,13 +15,22 @@ def setup(genbank_mirror, species_list='all', fetch_new=True):
     path_vars = config.instantiate_path_vars(genbank_mirror)
     info_dir, slurm, out, logger = path_vars
     assembly_summary = get_resources.get_resources(genbank_mirror, logger, fetch_new)
+    logger.info('{} genomes in assembly_summary.txt'.format(len(assembly_summary)))
     species = curate.get_species_list(assembly_summary, species_list)
 
     return path_vars, assembly_summary, species
 
-def assess_genbank(genbank_mirror, assembly_summary, species_list):
+def assess_genbank(genbank_mirror, assembly_summary, species_list, logger):
 
     genbank_status = curate.assess_genbank_mirror(genbank_mirror, assembly_summary, species_list)
+    local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_status
+
+    logger.info("{} genomes present in local collection.".format(len(local_genomes)))
+    logger.info("{} genomes missing from local collection.".format(len(new_genomes)))
+    if len(new_genomes) == 0:
+        logger.info("Local collection is up to do with latest assembly summary file.")
+    logger.info('{} sketch files present in local collection.'.format(len(sketch_files)))
+    logger.info('{} sketch files not in local collection.'.format(len(missing_sketch_files)))
 
     return genbank_status
 
@@ -30,14 +39,6 @@ def update(genbank_mirror, genbank_status, path_vars, assembly_summary, species_
     info_dir, slurm, out, logger = path_vars
     curate.create_species_dirs(genbank_mirror, assembly_summary, logger, species_list)
     local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_status
-
-    logger.info('{} genomes in assembly_summary.txt'.format(len(assembly_summary)))
-    logger.info("{} genomes present in local collection.".format(len(local_genomes)))
-    # Incorrect result
-    logger.info("{} genomes not in local collection.".format(len(new_genomes)))
-    logger.info('{} sketch files present in local collection.'.format(len(sketch_files)))
-    # Incorrect result
-    logger.info('{} sketch files not in local collection.'.format(len(missing_sketch_files)))
 
     curate.remove_old_genomes(genbank_mirror, assembly_summary, local_genomes, logger)
     sync.sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes, logger)
@@ -60,7 +61,8 @@ def main():
 
     genbank_mirror = args.genbank_mirror
     path_vars, assembly_summary, species = setup(genbank_mirror, args.species, fetch_new)
-    genbank_status = assess_genbank(genbank_mirror, assembly_summary, species)
+    info_dir, slurm, out, logger = path_vars
+    genbank_status = assess_genbank(genbank_mirror, assembly_summary, species, logger)
 
     if args.update:
         update(genbank_mirror, genbank_status, path_vars, assembly_summary, species)
