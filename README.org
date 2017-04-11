@@ -5,5 +5,8 @@ A set of tools for curating your collection of genomes retrieved from the [[http
    - Automatically synchronize your local collection with the latest assembly versions.
    - Assess the integrity of your FASTA collection
      - Labelling/annotation independent quality control using
-       +  statistical quality metrics
-       +  [[http://mash.readthedocs.io/en/latest/][genome and metagenome distance estimation using MinHash]]
+       + statistical quality metrics
+       + [[http://mash.readthedocs.io/en/latest/][genome and metagenome distance estimation using MinHash]]
+
+
+[[/images/NCBITK-Workflow.png]]
