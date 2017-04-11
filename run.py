@@ -15,8 +15,9 @@ def setup(genbank_mirror, species_list='all', fetch_new=True):
     path_vars = config.instantiate_path_vars(genbank_mirror)
     info_dir, slurm, out, logger = path_vars
     assembly_summary = get_resources.get_resources(genbank_mirror, logger, fetch_new)
+    species = curate.get_species_list(assembly_summary, species_list)
 
-    return path_vars, assembly_summary
+    return path_vars, assembly_summary, species
 
 def assess_genbank(genbank_mirror, assembly_summary, species_list):
 
@@ -53,14 +54,12 @@ def main():
     parser.add_argument("--use_local", help = 'Use local copy new assembly_summary.txt and names.dmp', action="store_true", default=False)
     args = parser.parse_args()
 
-
     fetch_new = True
     if args.use_local:
         fetch_new = False
 
     genbank_mirror = args.genbank_mirror
-    species = args.get_species_list(assembly_summary, args.species)
-    path_vars, assembly_summary = setup(genbank_mirror, species, fetch_new)
+    path_vars, assembly_summary, species = setup(genbank_mirror, args.species, fetch_new)
     genbank_status = assess_genbank(genbank_mirror, assembly_summary, species)
 
     if args.update:
