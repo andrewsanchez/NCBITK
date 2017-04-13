@@ -14,7 +14,7 @@ def setup(genbank_mirror, species_list, update_assembly_summary):
 
     path_vars = config.instantiate_path_vars(genbank_mirror)
     info_dir, slurm, out, logger = path_vars
-    assembly_summary = get_resources.get_resources(genbank_mirror, logger, fetch_new)
+    assembly_summary = get_resources.get_resources(genbank_mirror, logger, update_assembly_summary)
     logger.info('{} genomes in assembly_summary.txt'.format(len(assembly_summary)))
     species = curate.get_species_list(assembly_summary, species_list)
 
@@ -22,6 +22,7 @@ def setup(genbank_mirror, species_list, update_assembly_summary):
 
 def assess_genbank(genbank_mirror, assembly_summary, species_list, logger):
 
+    # TODO: Why does this take so long?
     genbank_status = curate.assess_genbank_mirror(genbank_mirror, assembly_summary, species_list)
     local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_status
 
@@ -52,15 +53,11 @@ def main():
     parser.add_argument("-s", "--species", help = 'List of species', nargs='+', default='all')
     parser.add_argument("-p", "--slurm", help = 'Submit jobs in parallel via SLURM pipeline tool.', action="store_true")
     parser.add_argument("-u", "--update", action="store_true")
-    parser.add_argument("--use_local", help = 'Use local copy new assembly_summary.txt and names.dmp', action="store_true", default=False)
+    parser.add_argument("--update_assembly_summary", help = 'Use local copy new assembly_summary.txt and names.dmp', action="store_true", default=True)
     args = parser.parse_args()
 
-    fetch_new = True
-    if args.use_local:
-        fetch_new = False
-
     genbank_mirror = args.genbank_mirror
-    path_vars, assembly_summary, species = setup(genbank_mirror, args.species, fetch_new)
+    path_vars, assembly_summary, species = setup(genbank_mirror, args.species, args.update_assembly_summary)
     info_dir, slurm, out, logger = path_vars
     genbank_status = assess_genbank(genbank_mirror, assembly_summary, species, logger)
 
