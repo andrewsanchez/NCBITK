@@ -27,7 +27,6 @@ def get_genome_id_and_url(assembly_summary, accession):
 
 def sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes, logger):
 
-    x = 1
     for accession in new_genomes:
         genome_id, genome_url = get_genome_id_and_url(assembly_summary, accession)
         species = assembly_summary.scientific_name.loc[accession]
@@ -46,8 +45,6 @@ def sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes, logger):
         except URLError as e:
             logger.exception('URLError[2] for {}\n{}'.format(genome_id, e))
             continue
-
-        x += 1
 
 def main():
 
