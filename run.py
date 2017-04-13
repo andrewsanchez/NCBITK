@@ -41,7 +41,7 @@ def update(genbank_mirror, genbank_status, path_vars, assembly_summary, species_
     curate.create_species_dirs(genbank_mirror, assembly_summary, logger, species_list)
     local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_status
 
-    curate.remove_old_genomes(genbank_mirror, assembly_summary, local_genomes, logger)
+    curate.remove_old_genomes(genbank_mirror, assembly_summary, old_genomes, logger)
     sync.sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes, logger)
     curate.unzip_genbank_mirror(genbank_mirror)
     rename.rename(genbank_mirror, assembly_summary)
