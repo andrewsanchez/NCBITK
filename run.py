@@ -10,7 +10,7 @@ from NCBITK import curate
 from NCBITK import get_resources
 from NCBITK import rename
 
-def setup(genbank_mirror, species_list='all', fetch_new=True):
+def setup(genbank_mirror, species_list, update_assembly_summary):
 
     path_vars = config.instantiate_path_vars(genbank_mirror)
     info_dir, slurm, out, logger = path_vars
@@ -34,7 +34,7 @@ def assess_genbank(genbank_mirror, assembly_summary, species_list, logger):
 
     return genbank_status
 
-def update(genbank_mirror, genbank_status, path_vars, assembly_summary, species_list="all"):
+def update(genbank_mirror, genbank_status, path_vars, assembly_summary, species_list):
 
     info_dir, slurm, out, logger = path_vars
     curate.create_species_dirs(genbank_mirror, assembly_summary, logger, species_list)
