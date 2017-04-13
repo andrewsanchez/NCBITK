@@ -31,9 +31,6 @@ def get_species_list(assembly_summary, species_list):
 
 def create_species_dirs(genbank_mirror, assembly_summary, logger, species_list):
 
-    if species_list == "all":
-        species_list = set(assembly_summary.scientific_name.tolist())
-
     for species in species_list:
         try:
             species_dir = os.path.join(genbank_mirror, species)
