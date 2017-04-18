@@ -7,13 +7,13 @@ import pandas as pd
 import tarfile
 from urllib.request import urlretrieve
 
-def get_assembly_summary(genbank_mirror, fetch_new=True, assembly_summary_url="ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt"):
+def get_assembly_summary(genbank_mirror, update=True, assembly_summary_url="ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt"):
 
     """Get current version of assembly_summary.txt and load into DataFrame"""
 
     assembly_summary_dst = os.path.join(genbank_mirror, ".info", "assembly_summary.txt")
 
-    if fetch_new:
+    if update:
         urlretrieve(assembly_summary_url, assembly_summary_dst)
         assembly_summary = pd.read_csv(assembly_summary_dst, sep="\t", index_col=0, skiprows=1)
 
@@ -36,7 +36,7 @@ def update_assembly_summary(genbank_mirror, assembly_summary, names):
 
     return assembly_summary
 
-def get_scientific_names(genbank_mirror, assembly_summary, taxdump_url="ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz", fetch_new=True):
+def get_scientific_names(genbank_mirror, assembly_summary, taxdump_url="ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz", update=True):
 
     """
     Get names.dmp from the taxonomy dump
@@ -45,7 +45,7 @@ def get_scientific_names(genbank_mirror, assembly_summary, taxdump_url="ftp://ft
     info_dir = os.path.join(genbank_mirror, ".info")
     names_dmp = os.path.join(genbank_mirror, ".info", 'names.dmp')
 
-    if fetch_new:
+    if update:
         taxdump = urlretrieve(taxdump_url)
         taxdump_tar = tarfile.open(taxdump[0])
         taxdump_tar.extract('names.dmp', info_dir)
@@ -62,20 +62,20 @@ def get_scientific_names(genbank_mirror, assembly_summary, taxdump_url="ftp://ft
 
     return names
 
-def get_resources(genbank_mirror, logger, fetch_new=True):
+def get_resources(genbank_mirror, logger, update=True):
 
     """
     Get assembly_summary.txt for bacteria and taxonomy dump file.
     Parse and load into Pandas DataFrames.
     """
 
-    if fetch_new:
-        assembly_summary = get_assembly_summary(genbank_mirror, fetch_new)
+    if update:
+        assembly_summary = get_assembly_summary(genbank_mirror, update)
         logger.info('Got new assembly_summary.txt')
 
         names = get_scientific_names(genbank_mirror, assembly_summary)
         assembly_summary = update_assembly_summary(genbank_mirror, assembly_summary, names)
     else:
-        assembly_summary = get_assembly_summary(genbank_mirror, fetch_new)
+        assembly_summary = get_assembly_summary(genbank_mirror, update)
 
     return assembly_summary
