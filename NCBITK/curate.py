@@ -70,9 +70,10 @@ def remove_old_genomes(genbank_mirror, assembly_summary, old_genomes, logger):
 
     # TODO: there might be a faster way to do this with pandas
     for genome_id in old_genomes:
+        # Would have to keep the old assembly summary file in order to avoid globbing the species dir
         associated_files = glob.glob("{}/*/{}*".format(genbank_mirror, genome_id)) # globs sketch files as well
         for f in associated_files:
-            os.remove(associated_files)
+            os.remove(f)
             logger.info("Removed {}".format(f))
 
 def get_sketch_files(genbank_mirror):
