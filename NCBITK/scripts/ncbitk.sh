@@ -7,4 +7,4 @@
 
 module load anaconda/3.latest
 
-srun python run.py /common/contrib/databases/genbank_04-12 --update
+srun python run.py /common/contrib/databases/genbank_04-12 --rsync --use_local_assembly
