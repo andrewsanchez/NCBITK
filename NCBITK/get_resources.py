@@ -77,5 +77,8 @@ def get_resources(genbank_mirror, logger, update=True):
         assembly_summary = update_assembly_summary(genbank_mirror, assembly_summary, names)
     else:
         assembly_summary = get_assembly_summary(genbank_mirror, update)
+        logger.info('Using local assembly_summary.txt')
+
+    logger.info('{} genomes in assembly_summary.txt'.format(len(assembly_summary)))
 
     return assembly_summary
