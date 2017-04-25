@@ -25,6 +25,7 @@ def get_assembly_summary(genbank_mirror, update=True, assembly_summary_url="ftp:
 
 def update_assembly_summary(genbank_mirror, assembly_summary, names):
 
+    # TODO: Very slow
     for taxid in names.index:
         scientific_name = names.scientific_name.loc[taxid]
         # get the list of indices that share the same species_taxid in assembly_summary
