@@ -37,16 +37,16 @@ def sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes, logger):
             grab_zipped_genome(genbank_mirror, species, genome_id, genome_url)
             logger.info("Downloaded {}".format(genome_id))
         except error_temp as e:
-            logger.exception('error_temp for {}\n{}'.format(genome_id, e))
+            logger.info('error_temp for {}\n{}'.format(genome_id, e))
             sleep(2)
             grab_zipped_genome(genbank_mirror, species, genome_id, genome_url)
             logger.info("Downloaded {}".format(genome_id))
         except URLError as e:
-            logger.exception('URLError[1] for {}\n{}'.format(genome_id, e))
+            logger.info('URLError[1] for {}\n{}'.format(genome_id, e))
             grab_zipped_genome(genbank_mirror, species, genome_id, genome_url, ext=".fasta.gz")
             logger.info("Downloaded {}".format(genome_id))
         except URLError as e:
-            logger.exception('URLError[2] for {}\n{}'.format(genome_id, e))
+            logger.info('URLError[2] for {}\n{}'.format(genome_id, e))
             continue
 
 def write_ftp_paths(genbank_mirror, assembly_summary, new_genomes):
