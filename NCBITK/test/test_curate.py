@@ -19,11 +19,15 @@ class TestCurate(unittest.TestCase):
         self.assembly_summary = pd.read_csv('NCBITK/test/resources/assembly_summary.txt', sep="\t", index_col=0)
         self.path_vars = config.instantiate_path_vars(self.genbank_mirror)
         self.info_dir, self.slurm, self.out, self.logger = self.path_vars
+        self.incoming = os.path.join(self.genbank_mirror, 'incoming')
+        os.mkdir(self.incoming)
 
         self.test_species = 'Acinetobacter_nosocomialis'
         self.test_genomes = self.assembly_summary.index[self.assembly_summary.scientific_name == self.test_species]
+
         self.species_list = curate.get_species_list(self.assembly_summary, [self.test_species])
         self.species_dir = os.path.join(self.genbank_mirror, self.test_species)
+        os.mkdir(self.species_dir)
 
         self.genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror, self.assembly_summary, self.species_list)
         self.local_genomes, self.new_genomes,\
@@ -49,7 +53,6 @@ class TestCurate(unittest.TestCase):
 
     def test_create_species_dirs_str(self):
         None
-        
 
     def test_assess_fresh(self):
 
@@ -127,6 +130,16 @@ class TestCurate(unittest.TestCase):
         local_genomes = curate.get_local_genomes(self.genbank_mirror)
 
         self.assertTrue(len(local_genomes) == len(self.test_genomes))
+
+    def test_post_rsync_cleanup(self):
+
+        for genome in self.test_genomes:
+            dst = os.path.join(self.species_dir, genome)
+            tempfile.mkstemp(prefix='{}_'.format(genome), dir=self.incoming)
+
+        curate.post_rsync_cleanup(self.genbank_mirror, self.assembly_summary)
+        self.assertTrue(len(self.test_genomes) == len(os.listdir(self.species_dir)))
+        self.assertFalse(os.listdir(self.incoming))
 
     def tearDown(self):
         shutil.rmtree(self.genbank_mirror)
