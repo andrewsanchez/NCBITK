@@ -149,6 +149,25 @@ def unzip_genbank_mirror(genbank_mirror):
                 except OSError:
                     continue
 
+def post_rsync_cleanup(genbank_mirror, assembly_summary, logger):
+
+    incoming = os.path.join(genbank_mirror, 'incoming')
+    for root, dirs, files in os.walk(incoming):
+        for f in files:
+            accession = '_'.join(f.split('_') [:2])
+            try:
+                species = assembly_summary.scientific_name.loc[accession]
+            except KeyError:
+                logger.info('KeyError for {}'.format(accession))
+                continue
+
+            src = os.path.join(root, f)
+            dst = os.path.join(genbank_mirror, species, f)
+            shutil.move(src, dst)
+
+    # shutil.rmtree(incoming)
+
+
 def main():
 
     parser = argparse.ArgumentParser()
