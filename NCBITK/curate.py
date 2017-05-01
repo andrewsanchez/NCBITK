@@ -102,8 +102,17 @@ def assess_genbank_mirror(genbank_mirror, assembly_summary, species_list, logger
 
     return local_genome_ids, local_genome_paths, new_genomes, old_genomes
 
+def remove_old_genomes(genbank_mirror, assembly_summary, old_genomes, logger):
 
-    return local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files
+    # TODO: there might be a faster way to do this with pandas
+    for genome_id in old_genomes:
+        # Would have to keep the old assembly summary file in order to avoid globbing the species dir
+        # or look it up in the tax dump
+        # Alternatively, use os.walk and remove re.matches
+        associated_files = glob.glob("{}/*/{}*".format(genbank_mirror, genome_id)) # globs sketch files as well
+        for f in associated_files:
+            os.remove(f)
+            logger.info("Removed {}".format(f))
 
 def unzip_genome(root, f, genome_id):
 
