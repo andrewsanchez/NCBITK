@@ -48,51 +48,44 @@ def parse_genome_id(genome):
 
     return genome_id
 
+def get_local_genomes(genbank_mirror):
 
-def get_new_genome_list(genbank_mirror, assembly_summary, local_genomes, species_list):
+    local_genome_ids = []
+    local_genome_paths = []
 
-    # TODO: Faster way to do this in pandas?
+    for root, dirs, files in os.walk(genbank_mirror):
+        for f in files:
+            if re.match('GCA.*fasta', f):
+                genome_id = parse_genome_id(f).group(0)
+                genome_path = os.path.join(root, f)
+                local_genome_ids.append(genome_id)
+                local_genome_paths.append(genome_path)
 
-    new_genomes = []
+    return local_genome_ids, local_genome_paths
 
-    for species in species_list:
-        latest_assembly_versions = assembly_summary.index[assembly_summary.scientific_name == species].tolist()
-        for genome in latest_assembly_versions:
-            if genome not in local_genomes:
-                new_genomes.append(genome)
 def get_latest_assembly_versions(assembly_summary, species_list):
 
     latest_assembly_versions = assembly_summary.index[assembly_summary.scientific_name.isin(species_list)]
 
     return latest_assembly_versions.tolist()
 
-    # TODO: there might be a faster way to do this with pandas
-    for genome_id in old_genomes:
-        # Would have to keep the old assembly summary file in order to avoid globbing the species dir
-        associated_files = glob.glob("{}/*/{}*".format(genbank_mirror, genome_id)) # globs sketch files as well
-        for f in associated_files:
-            os.remove(f)
-            logger.info("Removed {}".format(f))
 def diff(a, b):
 
     diff = set(a) - set(b)
 
     return list(diff)
 
-def get_missing_sketch_files(local_genomes, new_genomes, sketch_files):
+def get_new_genome_list(latest_assembly_versions, local_genomes):
 
-    missing_sketch_files = []
+    new_genomes = diff(latest_assembly_versions, local_genomes)
 
-    for genome_id in local_genomes:
-        if genome_id not in sketch_files:
-            missing_sketch_files.append(genome_id)
+    return new_genomes
 
-    for genome_id in new_genomes:
-        missing_sketch_files.append(genome_id)
+def get_old_genomes(local_genomes, latest_assembly_versions):
 
-    return missing_sketch_files
+    old_genomes = diff(local_genomes, latest_assembly_versions)
 
-def get_old_genomes(genbank_mirror, assembly_summary, local_genomes):
+    return old_genomes
 
 def assess_genbank_mirror(genbank_mirror, assembly_summary, species_list, logger):
 
