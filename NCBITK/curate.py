@@ -1,4 +1,3 @@
-import argparse
 import os
 import glob
 import gzip
@@ -158,7 +157,7 @@ def post_rsync_cleanup(genbank_mirror, assembly_summary, logger):
             dst = os.path.join(genbank_mirror, species, f)
             shutil.move(src, dst)
 
-    # shutil.rmtree(incoming)
+    shutil.rmtree(incoming)
 
 
 def rename(target_dir, assembly_summary):
