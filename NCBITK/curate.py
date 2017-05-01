@@ -61,10 +61,11 @@ def get_new_genome_list(genbank_mirror, assembly_summary, local_genomes, species
         for genome in latest_assembly_versions:
             if genome not in local_genomes:
                 new_genomes.append(genome)
+def get_latest_assembly_versions(assembly_summary, species_list):
 
-    return new_genomes
+    latest_assembly_versions = assembly_summary.index[assembly_summary.scientific_name.isin(species_list)]
 
-def remove_old_genomes(genbank_mirror, assembly_summary, old_genomes, logger):
+    return latest_assembly_versions.tolist()
 
     # TODO: there might be a faster way to do this with pandas
     for genome_id in old_genomes:
