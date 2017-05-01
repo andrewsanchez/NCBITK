@@ -74,17 +74,11 @@ def get_latest_assembly_versions(assembly_summary, species_list):
         for f in associated_files:
             os.remove(f)
             logger.info("Removed {}".format(f))
+def diff(a, b):
 
-def get_sketch_files(genbank_mirror):
+    diff = set(a) - set(b)
 
-    sketch_files = []
-    for root, dirs, files in os.walk(genbank_mirror):
-        for f in files:
-            if f.endswith('msh'):
-                genome_id = re.sub(r'.msh', '', f)
-                sketch_files.append(genome_id)
-
-    return sketch_files
+    return list(diff)
 
 def get_missing_sketch_files(local_genomes, new_genomes, sketch_files):
 
