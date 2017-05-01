@@ -43,17 +43,12 @@ def create_species_dirs(genbank_mirror, assembly_summary, logger, species_list):
             os.mkdir(species_dir)
             logger.info("Directory created: {}".format(species))
 
-def get_local_genomes(genbank_mirror):
+def parse_genome_id(genome):
 
-    local_genomes = []
+    genome_id = re.match('GCA_\d+\.\d', genome)
 
-    for root, dirs, files in os.walk(genbank_mirror):
-        for f in files:
-            if f.startswith('GCA'):
-                genome_id = '_'.join(f.split('_')[:2])
-                local_genomes.append(genome_id)
+    return genome_id
 
-    return local_genomes
 
 def get_new_genome_list(genbank_mirror, assembly_summary, local_genomes, species_list):
 
