@@ -94,22 +94,21 @@ def get_missing_sketch_files(local_genomes, new_genomes, sketch_files):
 
 def get_old_genomes(genbank_mirror, assembly_summary, local_genomes):
 
-    old_genomes = []
+def assess_genbank_mirror(genbank_mirror, assembly_summary, species_list, logger):
 
-    latest_assembly_versions = assembly_summary.index.tolist()
-    for genome_id in local_genomes:
-        if genome_id not in latest_assembly_versions:
-            old_genomes.append(genome_id)
+    local_genomes, local_genome_paths = get_local_genomes(genbank_mirror)
+    latest_assembly_versions = get_latest_assembly_versions(assembly_summary, species_list)
+    new_genomes = get_new_genome_list(latest_assembly_versions, local_genomes)
+    old_genomes = get_old_genomes(local_genomes, latest_assembly_versions)
 
-    return old_genomes
+    logger.info("{} genomes present in local collection.".format(len(local_genomes)))
+    logger.info("{} genomes missing from local collection.".format(len(new_genomes)))
+    logger.info("{} old genomes to be removed.".format(len(old_genomes)))
+    if len(new_genomes) == 0:
+        logger.info("Local collection is up to date with assembly_summary.txt.")
 
-def assess_genbank_mirror(genbank_mirror, assembly_summary, species_list):
+    return local_genome_ids, local_genome_paths, new_genomes, old_genomes
 
-    local_genomes = get_local_genomes(genbank_mirror)
-    new_genomes = get_new_genome_list(genbank_mirror, assembly_summary, local_genomes, species_list)
-    old_genomes = get_old_genomes(genbank_mirror, assembly_summary, local_genomes)
-    sketch_files = get_sketch_files(genbank_mirror)
-    missing_sketch_files = get_missing_sketch_files(local_genomes, new_genomes, sketch_files)
 
     return local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files
 
