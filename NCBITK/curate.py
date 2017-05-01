@@ -208,16 +208,3 @@ def rename(target_dir, assembly_summary):
                     old = os.path.join(root, f)
                     new = os.path.join(root, new_name)
                     os.rename(old, new)
-
-def main():
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("genbank_mirror")
-    args = parser.parse_args()
-
-    genbank_mirror = args.genbank_mirror
-    path_vars = config.instantiate_path_vars(genbank_mirror)
-    clean_up(genbank_mirror, path_vars)
-
-if __name__ == "__main__":
-    main()
