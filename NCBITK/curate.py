@@ -6,22 +6,6 @@ import logging
 import shutil
 import pandas as pd
 
-
-def clean_up(genbank_mirror, path_vars):
-
-    info_dir, slurm, out, logger = path_vars
-
-    latest_assembly_versions = os.path.join(info_dir, "latest_assembly_versions.csv")
-    latest_assembly_versions_array = os.path.join(slurm, "latest_assembly_versions_array.txt")
-    slurm_script = os.path.join(slurm, "get_latest_assembly_versions.sbatch")
-    sync_array = os.path.join(genbank_mirror, ".info", "slurm", "sync_array.txt")
-    sync_array_script = os.path.join(slurm, 'sync_array_script.sbatch')
-    grab_genomes_script = os.path.join(slurm, 'grab_genomes_script.sbatch')
-
-    for f in [latest_assembly_versions, latest_assembly_versions_array, slurm_script, sync_array_script, grab_genomes_script, sync_array]:
-        if os.path.isfile(f):
-            os.remove(f)
-
 def get_species_list(assembly_summary, species_list):
 
     if species_list == "all":
