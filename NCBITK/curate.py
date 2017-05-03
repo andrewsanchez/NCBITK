@@ -96,7 +96,7 @@ def remove_old_genomes(genbank_mirror, assembly_summary, local_genomes, old_geno
     for genome_id in old_genomes:
         genome_path = local_genomes[genome_id]
         os.remove(genome_path)
-        logger.info("Removed {}".format(f))
+        logger.info("Removed {}".format(genome_id))
 
 def unzip_genome(root, f, genome_id):
 
