@@ -40,6 +40,12 @@ def parse_genome_id(genome):
 
     return genome_id
 
+def diff(a, b):
+
+    diff = set(a) - set(b)
+
+    return list(diff)
+
 def get_local_genomes(genbank_mirror):
 
     local_genome_ids = []
