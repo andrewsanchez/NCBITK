@@ -7,14 +7,16 @@ import pandas as pd
 import tarfile
 from urllib.request import urlretrieve
 
-def get_assembly_summary(genbank_mirror, update=True, assembly_summary_url="ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt"):
+bacteria_assembly_summary = "ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt"
+
+def get_assembly_summary(genbank_mirror, update, assembly_summary_url=bacteria_assembly_summary):
 
     """Get current version of assembly_summary.txt and load into DataFrame"""
 
     assembly_summary_dst = os.path.join(genbank_mirror, ".info", "assembly_summary.txt")
 
     if update:
-        urlretrieve(assembly_summary_url, assembly_summary_dst)
+        urlretrieve(bacteria_assembly_summary, assembly_summary_dst)
         assembly_summary = pd.read_csv(assembly_summary_dst, sep="\t", index_col=0, skiprows=1)
 
     else:
