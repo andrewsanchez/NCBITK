@@ -13,9 +13,17 @@ def get_species_list(assembly_summary, species_list):
         species_list = assembly_summary.scientific_name[assembly_summary.scientific_name.notnull()]
         species_list = set(species_list.tolist())
 
-    return species_list
+        return species_list
 
-def create_species_dirs(genbank_mirror, assembly_summary, logger, species_list):
+    elif type(species_list) is list:
+
+        return species_list
+
+    elif type(species_list) is str:
+
+        return [species_list]
+
+def create_species_dirs(genbank_mirror, logger, species_list):
 
     for species in species_list:
         try:
