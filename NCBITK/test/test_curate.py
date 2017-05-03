@@ -100,63 +100,64 @@ class TestCurate(unittest.TestCase):
         self.assertTrue(len(new_genomes) == len(after_sync_new_genomes))
         self.assertTrue(len(old_genomes) == 1)
 
+    # def test_get_old_genomes(self):
 
-    def test_sync_latest_genomes(self):
+    #     local_genomes = self.test_genomes
+    #     not_in_assembly_summary = self.test_genomes[:5].tolist()
+    #     self.assembly_summary.drop(not_in_assembly_summary, inplace=True)
 
-        curate.create_species_dirs(self.genbank_mirror, self.assembly_summary, self.logger, self.species_list)
+    #     old_genomes = curate.get_old_genomes(self.genbank_mirror, local_genomes)
 
-        genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror, self.assembly_summary, self.species_list)
-        local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_assessment
-        before_sync_new_genomes = new_genomes
+    #     self.assertTrue(sorted(not_in_assembly_summary) == sorted(old_genomes))
 
-        sync.sync_latest_genomes(self.genbank_mirror, self.assembly_summary, new_genomes, self.logger)
+    # def test_get_local_genomes(self):
 
-        species_dir = os.path.join(self.genbank_mirror, self.test_species)
+    #     curate.create_species_dirs(self.genbank_mirror,
+    #                                self.logger,
+    #                                self.species_list)
 
-        for f in glob.glob('{}/GCA*'.format(species_dir)):
-            self.assertTrue(os.path.isfile(f))
+    #     for genome in self.test_genomes:
+    #         dst = os.path.join(self.species_dir, genome)
+    #         tempfile.mkstemp(prefix=genome, dir=self.species_dir)
 
-        genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror, self.assembly_summary, self.species_list)
-        local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_assessment
+    #     local_genomes = curate.get_local_genomes(self.genbank_mirror)
 
-        self.assertTrue(len(before_sync_new_genomes) == len(local_genomes))
-        self.assertTrue(len(local_genomes) == len(self.test_genomes))
-        self.assertTrue(len(missing_sketch_files) == len(self.test_genomes))
-        self.assertTrue(len(new_genomes) == 0)
-        self.assertTrue(len(old_genomes) == 0)
-        self.assertTrue(len(sketch_files) == 0)
+    #     self.assertTrue(len(local_genomes) == len(self.test_genomes))
 
-    def test_get_old_genomes(self):
+    # def test_post_rsync_cleanup(self):
 
-        local_genomes = self.test_genomes
-        not_in_assembly_summary = self.test_genomes[:5].tolist()
-        self.assembly_summary.drop(not_in_assembly_summary, inplace=True)
+    #     for genome in self.test_genomes:
+    #         dst = os.path.join(self.species_dir, genome)
+    #         tempfile.mkstemp(prefix='{}_'.format(genome), dir=self.incoming)
 
-        old_genomes = curate.get_old_genomes(self.genbank_mirror, self.assembly_summary, local_genomes)
+    #     curate.post_rsync_cleanup(self.genbank_mirror, self.assembly_summary, self.logger)
+    #     self.assertTrue(len(self.test_genomes) == len(os.listdir(self.species_dir)))
+    #     self.assertFalse(os.listdir(self.incoming))
 
-        self.assertTrue(sorted(not_in_assembly_summary) == sorted(old_genomes))
+    # def test_sync_latest_genomes(self):
 
-    def test_get_local_genomes(self):
+    #     curate.create_species_dirs(self.genbank_mirror, self.assembly_summary, self.logger, self.species_list)
 
-        curate.create_species_dirs(self.genbank_mirror, self.assembly_summary, self.logger, self.species_list)
+    #     genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror, self.assembly_summary, self.species_list)
+    #     local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_assessment
+    #     before_sync_new_genomes = new_genomes
 
-        for genome in self.test_genomes:
-            dst = os.path.join(self.species_dir, genome)
-            tempfile.mkstemp(prefix=genome, dir=self.species_dir)
+    #     sync.sync_latest_genomes(self.genbank_mirror, self.assembly_summary, new_genomes, self.logger)
 
-        local_genomes = curate.get_local_genomes(self.genbank_mirror)
+    #     species_dir = os.path.join(self.genbank_mirror, self.test_species)
 
-        self.assertTrue(len(local_genomes) == len(self.test_genomes))
+    #     for f in glob.glob('{}/GCA*'.format(species_dir)):
+    #         self.assertTrue(os.path.isfile(f))
 
-    def test_post_rsync_cleanup(self):
+    #     genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror, self.assembly_summary, self.species_list)
+    #     local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_assessment
 
-        for genome in self.test_genomes:
-            dst = os.path.join(self.species_dir, genome)
-            tempfile.mkstemp(prefix='{}_'.format(genome), dir=self.incoming)
-
-        curate.post_rsync_cleanup(self.genbank_mirror, self.assembly_summary)
-        self.assertTrue(len(self.test_genomes) == len(os.listdir(self.species_dir)))
-        self.assertFalse(os.listdir(self.incoming))
+    #     self.assertTrue(len(before_sync_new_genomes) == len(local_genomes))
+    #     self.assertTrue(len(local_genomes) == len(self.test_genomes))
+    #     self.assertTrue(len(missing_sketch_files) == len(self.test_genomes))
+    #     self.assertTrue(len(new_genomes) == 0)
+    #     self.assertTrue(len(old_genomes) == 0)
+    #     self.assertTrue(len(sketch_files) == 0)
 
     def tearDown(self):
         shutil.rmtree(self.genbank_mirror)
