@@ -54,11 +54,11 @@ def main():
     genbank_mirror = args.genbank_mirror
     path_vars, assembly_summary, species = setup(genbank_mirror, args.species, update_assembly_summary)
     info_dir, slurm, out, logger = path_vars
-    genbank_status = assess_genbank(genbank_mirror, assembly_summary, species)
-    local_genomes, local_genome_paths, new_genomes, old_genomes = genbank_status
+    genbank_status = assess_genbank_mirror(genbank_mirror, assembly_summary, species, logger)
+    local_genomes, new_genomes, old_genomes = genbank_status
 
-    curate.create_species_dirs(genbank_mirror, assembly_summary, logger, species)
-    curate.remove_old_genomes(genbank_mirror, assembly_summary, old_genomes, logger)
+    curate.create_species_dirs(genbank_mirror, logger, species)
+    curate.remove_old_genomes(genbank_mirror, assembly_summary, local_genomes, old_genomes, logger)
     sync.rsync_latest_genomes(genbank_mirror, assembly_summary, new_genomes)
     post_rsync_cleanup(genbank_mirror, assembly_summary, logger)
     curate.unzip_genbank_mirror(genbank_mirror)
