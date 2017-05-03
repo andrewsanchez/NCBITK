@@ -18,13 +18,6 @@ def setup(genbank_mirror, species_list, update_assembly_summary):
 
     return path_vars, assembly_summary, species
 
-def assess_genbank(genbank_mirror, assembly_summary, species_list, logger):
-
-    genbank_status = curate.assess_genbank_mirror(genbank_mirror, assembly_summary, species_list, logger)
-    local_genomes, local_genome_paths, new_genomes, old_genomes = genbank_status
-
-    return genbank_status
-
 def update(genbank_mirror, genbank_status, path_vars, assembly_summary, species_list):
 
     info_dir, slurm, out, logger = path_vars
@@ -54,7 +47,7 @@ def main():
     genbank_mirror = args.genbank_mirror
     path_vars, assembly_summary, species = setup(genbank_mirror, args.species, update_assembly_summary)
     info_dir, slurm, out, logger = path_vars
-    genbank_status = assess_genbank_mirror(genbank_mirror, assembly_summary, species, logger)
+    genbank_status = curate.assess_genbank_mirror(genbank_mirror, assembly_summary, species, logger)
     local_genomes, new_genomes, old_genomes = genbank_status
 
     curate.create_species_dirs(genbank_mirror, logger, species)
