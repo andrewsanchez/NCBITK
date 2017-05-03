@@ -65,7 +65,7 @@ def get_latest_assembly_versions(assembly_summary, species_list):
 
     return latest_assembly_versions.tolist()
 
-def get_new_genome_list(latest_assembly_versions, local_genomes):
+def get_new_genomes(latest_assembly_versions, local_genomes):
 
     new_genomes = diff(latest_assembly_versions, list(local_genomes.keys()))
 
@@ -81,7 +81,7 @@ def assess_genbank_mirror(genbank_mirror, assembly_summary, species_list, logger
 
     local_genomes = get_local_genomes(genbank_mirror)
     latest_assembly_versions = get_latest_assembly_versions(assembly_summary, species_list)
-    new_genomes = get_new_genome_list(latest_assembly_versions, local_genomes)
+    new_genomes = get_new_genomes(latest_assembly_versions, local_genomes)
     old_genomes = get_old_genomes(local_genomes, latest_assembly_versions)
 
     logger.info("{} genomes present in local collection.".format(len(local_genomes)))
