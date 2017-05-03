@@ -87,10 +87,10 @@ def assess_genbank_mirror(genbank_mirror, assembly_summary, species_list, logger
     logger.info("{} genomes present in local collection.".format(len(local_genomes)))
     logger.info("{} genomes missing from local collection.".format(len(new_genomes)))
     logger.info("{} old genomes to be removed.".format(len(old_genomes)))
-    if len(new_genomes) == 0:
+    if not new_genomes:
         logger.info("Local collection is up to date with assembly_summary.txt.")
 
-    return local_genome_ids, local_genome_paths, new_genomes, old_genomes
+    return local_genomes, new_genomes, old_genomes
 
 def remove_old_genomes(genbank_mirror, assembly_summary, old_genomes, logger):
 
