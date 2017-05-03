@@ -1,5 +1,4 @@
 import os
-import glob
 import gzip
 import re
 import logging
