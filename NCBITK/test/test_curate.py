@@ -56,7 +56,7 @@ class TestCurate(unittest.TestCase):
 
         self.assertEqual(len(local_species), len(species_list))
 
-    def test_assess_genbank_mirror(self):
+    def test_assess_fresh(self):
 
         genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror,
                                                           self.assembly_summary,
@@ -69,23 +69,37 @@ class TestCurate(unittest.TestCase):
         self.assertTrue(len(local_genomes) == 0)
         self.assertTrue(len(old_genomes) == 0)
 
+    def test_assess_changes(self):
 
-        curate.create_species_dirs(self.genbank_mirror, self.assembly_summary, self.logger, self.species_list)
-        local_species = os.listdir(self.genbank_mirror)
-        local_species.remove('.info')
+        curate.create_species_dirs(self.genbank_mirror,
+                                   self.logger,
+                                   self.species_list)
 
-        self.assertEqual(len(local_species), len(self.species_list))
+        genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror,
+                                                          self.assembly_summary,
+                                                          self.species_list,
+                                                          self.logger)
 
-    def test_create_species_dirs_str(self):
-        None
+        local_genomes, new_genomes, old_genomes = genbank_assessment
+        before_sync_new_genomes = new_genomes[:10]
+        after_sync_new_genomes = new_genomes[10:]
 
-    def test_assess_fresh(self):
+        for genome in before_sync_new_genomes:
+            dst = os.path.join(self.species_dir, genome)
+            tempfile.mkstemp(prefix='{}.fasta'.format(genome), dir=self.species_dir)
 
-        self.assertTrue(len(self.new_genomes) == len(self.test_genomes))
-        self.assertTrue(len(self.missing_sketch_files) == len(self.test_genomes))
-        self.assertTrue(len(self.sketch_files) == 0)
-        self.assertTrue(len(self.local_genomes) == 0)
-        self.assertTrue(len(self.old_genomes) == 0)
+        genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror,
+                                                          self.assembly_summary.drop(before_sync_new_genomes[0]),
+                                                          self.species_list,
+                                                          self.logger)
+
+        local_genomes, new_genomes, old_genomes = genbank_assessment
+
+        self.assertTrue(len(local_genomes) == len(before_sync_new_genomes))
+        self.assertFalse(len(new_genomes) == 0)
+        self.assertTrue(len(new_genomes) == len(after_sync_new_genomes))
+        self.assertTrue(len(old_genomes) == 1)
+
 
     def test_sync_latest_genomes(self):
 
@@ -109,28 +123,6 @@ class TestCurate(unittest.TestCase):
         self.assertTrue(len(local_genomes) == len(self.test_genomes))
         self.assertTrue(len(missing_sketch_files) == len(self.test_genomes))
         self.assertTrue(len(new_genomes) == 0)
-        self.assertTrue(len(old_genomes) == 0)
-        self.assertTrue(len(sketch_files) == 0)
-
-    def test_assess_partial(self):
-
-        curate.create_species_dirs(self.genbank_mirror, self.assembly_summary, self.logger, self.species_list)
-
-        genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror, self.assembly_summary, self.species_list)
-        local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_assessment
-        before_sync_new_genomes = new_genomes[:10]
-        after_sync_new_genomes = new_genomes[10:]
-
-        # TODO: Already testing this function.  Probably unnecessary
-        sync.sync_latest_genomes(self.genbank_mirror, self.assembly_summary, before_sync_new_genomes, self.logger)
-
-        genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror, self.assembly_summary, self.species_list)
-        local_genomes, new_genomes, old_genomes, sketch_files, missing_sketch_files = genbank_assessment
-
-        self.assertTrue(len(local_genomes) == len(before_sync_new_genomes))
-        self.assertTrue(len(missing_sketch_files) == len(before_sync_new_genomes) + len(new_genomes))
-        self.assertFalse(len(new_genomes) == 0)
-        self.assertTrue(len(new_genomes) == len(after_sync_new_genomes))
         self.assertTrue(len(old_genomes) == 0)
         self.assertTrue(len(sketch_files) == 0)
 
