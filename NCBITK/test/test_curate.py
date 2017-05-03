@@ -56,7 +56,19 @@ class TestCurate(unittest.TestCase):
 
         self.assertEqual(len(local_species), len(species_list))
 
-    def test_create_species_dirs_list(self):
+    def test_assess_genbank_mirror(self):
+
+        genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror,
+                                                          self.assembly_summary,
+                                                          self.all_species_from_assembly_summary,
+                                                          self.logger)
+
+        local_genomes, new_genomes, old_genomes = genbank_assessment
+
+        self.assertTrue(len(new_genomes) == len(self.all_genomes_from_assembly_summary))
+        self.assertTrue(len(local_genomes) == 0)
+        self.assertTrue(len(old_genomes) == 0)
+
 
         curate.create_species_dirs(self.genbank_mirror, self.assembly_summary, self.logger, self.species_list)
         local_species = os.listdir(self.genbank_mirror)
