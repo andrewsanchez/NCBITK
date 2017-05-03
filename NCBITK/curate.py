@@ -48,18 +48,16 @@ def diff(a, b):
 
 def get_local_genomes(genbank_mirror):
 
-    local_genome_ids = []
-    local_genome_paths = []
+    local_genomes = {}
 
     for root, dirs, files in os.walk(genbank_mirror):
         for f in files:
             if re.match('GCA.*fasta', f):
                 genome_id = parse_genome_id(f).group(0)
                 genome_path = os.path.join(root, f)
-                local_genome_ids.append(genome_id)
-                local_genome_paths.append(genome_path)
+                local_genomes[genome_id] = genome_path
 
-    return local_genome_ids, local_genome_paths
+    return local_genomes
 
 def get_latest_assembly_versions(assembly_summary, species_list):
 
