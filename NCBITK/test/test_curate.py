@@ -35,6 +35,16 @@ class TestCurate(unittest.TestCase):
 
         os.mkdir(self.species_dir)
 
+    def test_get_species_list(self):
+
+        species_list = ['Bacillus_anthracis', 'Escherichia_coli']
+        species_from_string = curate.get_species_list(self.assembly_summary, self.test_species)
+        species_from_list = curate.get_species_list(self.assembly_summary, species_list)
+        all_species = curate.get_species_list(self.assembly_summary, 'all')
+
+        self.assertTrue(len(species_from_string), 1)
+        self.assertTrue(len(species_from_list), len(species_list))
+        self.assertTrue(len(all_species), len(self.all_species_from_assembly_summary))
 
     def test_create_species_dirs_all(self):
 
