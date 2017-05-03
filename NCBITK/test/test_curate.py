@@ -29,10 +29,6 @@ class TestCurate(unittest.TestCase):
         self.species_dir = os.path.join(self.genbank_mirror, self.test_species)
         os.mkdir(self.species_dir)
 
-        self.genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror, self.assembly_summary, self.species_list)
-        self.local_genomes, self.new_genomes,\
-        self.old_genomes, self.sketch_files,\
-        self.missing_sketch_files = self.genbank_assessment
 
     def test_create_species_dirs_all(self):
 
