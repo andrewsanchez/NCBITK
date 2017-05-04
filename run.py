@@ -15,8 +15,11 @@ def setup(genbank_mirror, species_list, update_assembly_summary):
     info_dir, slurm, out, logger = path_vars
     assembly_summary = get_resources.get_resources(genbank_mirror, logger, update_assembly_summary)
     species = curate.get_species_list(assembly_summary, species_list)
+    genbank_status = curate.assess_genbank_mirror(genbank_mirror,
+                                                  assembly_summary,
+                                                  species, logger)
 
-    return path_vars, assembly_summary, species
+    return path_vars, assembly_summary, species, genbank_status
 
 def update(genbank_mirror, genbank_status, path_vars, assembly_summary, species_list):
 
