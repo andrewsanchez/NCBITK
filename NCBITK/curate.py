@@ -176,13 +176,13 @@ def rename(target_dir, assembly_summary):
 
     for root, dirs, files in os.walk(target_dir):
         for f in files:
-            if f.startswith("GCA"):
-                accession_id = '_'.join(f.split('_') [:2])
-                if accession_id in assembly_summary.index:
-                    org_name = assembly_summary.get_value(accession_id, 'scientific_name')
-                    strain = assembly_summary.get_value(accession_id, 'infraspecific_name')
-                    assembly_level  = assembly_summary.get_value(accession_id, 'assembly_level')
-                    new_name = '{}_{}_{}_{}.fasta'.format(accession_id, org_name, strain, assembly_level)
+            if re.match('GCA.*fasta', f):
+                genome_id = parse_genome_id(f).group(0)
+                if genome_id in assembly_summary.index:
+                    org_name = assembly_summary.get_value(genome_id, 'scientific_name')
+                    strain = assembly_summary.get_value(genome_id, 'infraspecific_name')
+                    assembly_level  = assembly_summary.get_value(genome_id, 'assembly_level')
+                    new_name = '{}_{}_{}_{}.fasta'.format(genome_id, org_name, strain, assembly_level)
                     rm_words = re.compile( r'((?<=_)(sp|sub|substr|subsp|str|strain)(?=_))' )
                     new_name = rm_words.sub('_', new_name)
                     new_name = re.sub(r'_+', '_', new_name )
