@@ -1,0 +1,11 @@
+setup.cfg
+setup.py
+NCBITK/__init__.py
+NCBITK/config.py
+NCBITK/curate.py
+NCBITK/get_resources.py
+NCBITK/sync.py
+NCBITK.egg-info/PKG-INFO
+NCBITK.egg-info/SOURCES.txt
+NCBITK.egg-info/dependency_links.txt
+NCBITK.egg-info/top_level.txt
