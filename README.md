@@ -9,20 +9,40 @@ Requires [rsync](https://rsync.samba.org/).  Tested only with rsync version 3.1.
 
 ## Installation
 
+Using [pip](https://packaging.python.org/installing/):
+
 ```
 pip install ncbitk
-ncbitk --help
 ```
 
-Or simply clone this repository:
+Or:
 
 ```
-mkdir -p $HOME/projects/NCBITK && cd $HOME/projects/NCBITK
 git clone https://github.com/andrewsanchez/NCBITK.git
-pip install -r requirements.text
-python run.py --help
+python setup.py install
 ```
 
-## Usage
+Regardless of which installation method you choose, I recommend using a [virtual environment](http://python-guide-pt-br.readthedocs.io/en/latest/dev/virtualenvs/).
+
+## Basic Usage
+
+![NCBITK Workflow](/images/NCBITK-Workflow.png)
+
+### Download all GenBank bacteria
+
+```
+ncbitk local-directory --update
+```
+
+If you have already run NCBITK, the above will also update your local collection, i.e. remove old genomes no longer in the assembly summary and download the latest assembly versions.
+
+### Get the status of your collection
+
+```
+ncbitk local-directory --status
+```
+
+This will tell you how many genomes you have, what is missing from your collection, and how many deprecated genomes are present.
+
 
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
