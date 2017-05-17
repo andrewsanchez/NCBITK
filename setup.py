@@ -8,7 +8,7 @@ from os import path
 setup(
     name = 'NCBITK',
     packages = ['NCBITK'], # this must be the same as the name above
-    version = '1.0a1',
+    version = '1.0a3',
     license = 'MIT',
     description = "A tool kit for accessing NCBI's GenBank",
     # long_description=long_description,
