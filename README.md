@@ -1,4 +1,4 @@
-# NCBI Tool Kit #
+# NCBI Tool Kit
 
 A tool kit for downloading and curating collections of genomes retrieved from the  National Center for Biotechology Information's public database, [GenBank](https://www.ncbi.nlm.nih.gov/).
 
@@ -7,12 +7,22 @@ A tool kit for downloading and curating collections of genomes retrieved from th
 
 Requires [rsync](https://rsync.samba.org/).  Tested only with rsync version 3.1.2  protocol version 31.
 
-## Install ##
+## Installation
 
 ```
 pip install ncbitk
+ncbitk --help
 ```
 
-## Usage ##
+Or simply clone this repository:
+
+```
+mkdir -p $HOME/projects/NCBITK && cd $HOME/projects/NCBITK
+git clone https://github.com/andrewsanchez/NCBITK.git
+pip install -r requirements.text
+python run.py --help
+```
+
+## Usage
 
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
