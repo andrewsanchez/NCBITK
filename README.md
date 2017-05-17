@@ -7,4 +7,12 @@ A tool kit for downloading and curating collections of genomes retrieved from th
 
 Requires [rsync](https://rsync.samba.org/).  Tested only with rsync version 3.1.2  protocol version 31.
 
+## Install ##
+
+```
+pip install ncbitk
+```
+
+## Usage ##
+
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
