@@ -1,55 +1,64 @@
-from NCBITK import config
-from NCBITK import curate
-from NCBITK import sync
-from NCBITK import get_resources
-
-import unittest
-import os
 import glob
-import tempfile
+import os
 import shutil
+import tempfile
+import unittest
+
 import pandas as pd
+
+from NCBITK import config, curate, get_resources, sync
 
 
 class TestCurate(unittest.TestCase):
-
     def setUp(self):
 
         self.genbank_mirror = tempfile.mkdtemp(prefix='Genbank_')
         self.path_vars = config.instantiate_path_vars(self.genbank_mirror)
         self.info_dir, self.slurm, self.out, self.logger = self.path_vars
-        self.assembly_summary = pd.read_csv('NCBITK/test/resources/assembly_summary.txt', sep="\t", index_col=0)
+        self.assembly_summary = pd.read_csv(
+            'NCBITK/test/resources/assembly_summary.txt',
+            sep="\t",
+            index_col=0)
         self.incoming = os.path.join(self.genbank_mirror, 'incoming')
         os.mkdir(self.incoming)
 
         self.test_species = 'Acinetobacter_nosocomialis'
-        self.test_genomes = self.assembly_summary.index[self.assembly_summary.scientific_name == self.test_species]
+        self.test_genomes = self.assembly_summary.index[
+            self.assembly_summary.scientific_name == self.test_species]
 
-        self.species_list = curate.get_species_list(self.assembly_summary, self.test_species)
+        self.species_list = curate.get_species_list(self.assembly_summary,
+                                                    self.test_species)
         self.species_dir = os.path.join(self.genbank_mirror, self.test_species)
 
-        self.all_species_from_assembly_summary = self.assembly_summary.scientific_name[self.assembly_summary.scientific_name.notnull()]
-        self.all_species_from_assembly_summary = set(self.all_species_from_assembly_summary.tolist())
+        self.all_species_from_assembly_summary = self.assembly_summary.scientific_name[
+            self.assembly_summary.scientific_name.notnull()]
+        self.all_species_from_assembly_summary = set(
+            self.all_species_from_assembly_summary.tolist())
         # excludes genomes with NaN value for scientific name
-        self.all_genomes_from_assembly_summary = self.assembly_summary.index[self.assembly_summary.scientific_name.notnull()]
+        self.all_genomes_from_assembly_summary = self.assembly_summary.index[
+            self.assembly_summary.scientific_name.notnull()]
 
         os.mkdir(self.species_dir)
 
     def test_get_species_list(self):
 
         species_list = ['Bacillus_anthracis', 'Escherichia_coli']
-        species_from_string = curate.get_species_list(self.assembly_summary, self.test_species)
-        species_from_list = curate.get_species_list(self.assembly_summary, species_list)
+        species_from_string = curate.get_species_list(self.assembly_summary,
+                                                      self.test_species)
+        species_from_list = curate.get_species_list(self.assembly_summary,
+                                                    species_list)
         all_species = curate.get_species_list(self.assembly_summary, 'all')
 
         self.assertTrue(len(species_from_string), 1)
         self.assertTrue(len(species_from_list), len(species_list))
-        self.assertTrue(len(all_species), len(self.all_species_from_assembly_summary))
+        self.assertTrue(
+            len(all_species), len(self.all_species_from_assembly_summary))
 
     def test_create_species_dirs_all(self):
 
         species_list = curate.get_species_list(self.assembly_summary, 'all')
-        curate.create_species_dirs(self.genbank_mirror, self.logger, species_list)
+        curate.create_species_dirs(self.genbank_mirror, self.logger,
+                                   species_list)
         local_species = os.listdir(self.genbank_mirror)
         local_species.remove('.info')
         local_species.remove('incoming')
@@ -58,27 +67,25 @@ class TestCurate(unittest.TestCase):
 
     def test_assess_fresh(self):
 
-        genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror,
-                                                          self.assembly_summary,
-                                                          self.all_species_from_assembly_summary,
-                                                          self.logger)
+        genbank_assessment = curate.assess_genbank_mirror(
+            self.genbank_mirror, self.assembly_summary,
+            self.all_species_from_assembly_summary, self.logger)
 
         local_genomes, new_genomes, old_genomes = genbank_assessment
 
-        self.assertTrue(len(new_genomes) == len(self.all_genomes_from_assembly_summary))
+        self.assertTrue(
+            len(new_genomes) == len(self.all_genomes_from_assembly_summary))
         self.assertTrue(len(local_genomes) == 0)
         self.assertTrue(len(old_genomes) == 0)
 
     def test_assess_changes(self):
 
-        curate.create_species_dirs(self.genbank_mirror,
-                                   self.logger,
+        curate.create_species_dirs(self.genbank_mirror, self.logger,
                                    self.species_list)
 
-        genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror,
-                                                          self.assembly_summary,
-                                                          self.species_list,
-                                                          self.logger)
+        genbank_assessment = curate.assess_genbank_mirror(
+            self.genbank_mirror, self.assembly_summary, self.species_list,
+            self.logger)
 
         local_genomes, new_genomes, old_genomes = genbank_assessment
         before_sync_new_genomes = new_genomes[:10]
@@ -86,12 +93,13 @@ class TestCurate(unittest.TestCase):
 
         for genome in before_sync_new_genomes:
             dst = os.path.join(self.species_dir, genome)
-            tempfile.mkstemp(prefix='{}.fasta'.format(genome), dir=self.species_dir)
+            tempfile.mkstemp(
+                prefix='{}.fasta'.format(genome), dir=self.species_dir)
 
-        genbank_assessment = curate.assess_genbank_mirror(self.genbank_mirror,
-                                                          self.assembly_summary.drop(before_sync_new_genomes[0]),
-                                                          self.species_list,
-                                                          self.logger)
+        genbank_assessment = curate.assess_genbank_mirror(
+            self.genbank_mirror,
+            self.assembly_summary.drop(before_sync_new_genomes[0]),
+            self.species_list, self.logger)
 
         local_genomes, new_genomes, old_genomes = genbank_assessment
 
@@ -162,8 +170,10 @@ class TestCurate(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.genbank_mirror)
 
+
 class TestArrays(unittest.TestCase):
     None
+
 
 if __name__ == '__main__':
     unittest.main()

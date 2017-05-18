@@ -9,7 +9,6 @@ from NCBITK import curate
 
 
 class TestSlurmPipeline(unittest.TestCase):
-
     def setUp(self):
 
         # self.genbank_mirror = tempfile.mkdtemp()
@@ -22,17 +21,22 @@ class TestSlurmPipeline(unittest.TestCase):
             os.mkdir(self.info_dir)
 
         assembly_summary_src = 'NCBITK/test/resources/assembly_summary.txt'
-        assembly_summary_dst = os.path.join(self.info_dir, 'assembly_summary.txt')
+        assembly_summary_dst = os.path.join(self.info_dir,
+                                            'assembly_summary.txt')
         shutil.copyfile(assembly_summary_src, assembly_summary_dst)
 
         self.specification = 'NCBITK/test/specification.json'
-        self.assembly_summary = pd.read_csv('NCBITK/test/resources/assembly_summary.txt', sep="\t", index_col=0)
+        self.assembly_summary = pd.read_csv(
+            'NCBITK/test/resources/assembly_summary.txt',
+            sep="\t",
+            index_col=0)
         self.species_list = 'Acinetobacter_nosocomialis'
         self.species_dir = os.path.join(self.genbank_mirror, self.species_list)
 
     def test_slurm_pipeline(self):
 
-        self.cmd = "slurm-pipeline.py -s {} {}".format(self.specification, self.genbank_mirror)
+        self.cmd = "slurm-pipeline.py -s {} {}".format(self.specification,
+                                                       self.genbank_mirror)
         subprocess.Popen(self.cmd, shell=True).wait()
         self.assertTrue(os.path.isdir(self.genbank_mirror))
         self.assertTrue(os.path.isdir(self.info_dir))
