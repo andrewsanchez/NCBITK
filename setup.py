@@ -2,13 +2,13 @@ from setuptools import setup, find_packages
 from os import path
 
 # here = path.abspath(path.dirname(__file__))
-# with open('README.md', encoding='utf-8') as f:
+# with open('README.rst', encoding='utf-8') as f:
 #     long_description = f.read()
 
 setup(
     name='NCBITK',
     packages=['NCBITK'],  # this must be the same as the name above
-    version='1.0a4',
+    version='1.0a5',
     license='MIT',
     description="A tool kit for accessing NCBI's GenBank",
     # long_description=long_description,
