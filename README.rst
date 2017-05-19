@@ -28,7 +28,7 @@ Regardless of which installation method you choose, I recommend using a `virtual
  Basic Usage
 =============
 
-.. image:: https://github.com/andrewsanchez/NCBITK/raw/master/images/NCBITK-Workflow.png
+.. image:: https://github.com/andrewsanchez/NCBITK/raw/master/NCBITK/docs/NCBITK-Workflow.png
 
 Download all GenBank bacteria::
 
