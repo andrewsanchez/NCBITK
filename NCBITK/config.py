@@ -4,6 +4,7 @@ import os
 import time
 import logging
 
+
 def instantiate_path_vars(genbank_mirror):
 
     info_dir = os.path.join(genbank_mirror, ".info")
@@ -19,6 +20,7 @@ def instantiate_path_vars(genbank_mirror):
     logger = instantiate_logger(log_file)
 
     return info_dir, slurm, out, logger
+
 
 def instantiate_logger(log_file):
 

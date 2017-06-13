@@ -1,14 +1,12 @@
-from NCBITK import config
-from NCBITK import curate
-from NCBITK import sync
-from NCBITK import get_resources
-
-import unittest
-import os
 import glob
-import tempfile
+import os
 import shutil
+import tempfile
+import unittest
+
 import pandas as pd
+
+from NCBITK import config, curate, get_resources, sync
 
 
 class TestCurate(unittest.TestCase):
@@ -174,6 +172,7 @@ class TestCurate(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.genbank_mirror)
+
 
 
 if __name__ == '__main__':
