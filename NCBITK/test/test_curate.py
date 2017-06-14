@@ -14,22 +14,19 @@ class TestCurate(unittest.TestCase):
 
         self.genbank_mirror = tempfile.mkdtemp(prefix='Genbank_')
         self.path_vars = config.instantiate_path_vars(self.genbank_mirror)
+        self.incoming = os.path.join(self.genbank_mirror, 'incoming')
         self.info_dir, self.slurm, self.out, self.logger = self.path_vars
         self.assembly_summary = pd.read_csv(
             'NCBITK/test/resources/assembly_summary.txt',
             sep="\t",
             index_col=0)
-        self.incoming = os.path.join(self.genbank_mirror, 'incoming')
-        os.mkdir(self.incoming)
-
+        self.assembly_summary_len = len(self.assembly_summary.index)
         self.test_species = 'Acinetobacter_nosocomialis'
         self.test_genomes = self.assembly_summary.index[
             self.assembly_summary.scientific_name == self.test_species]
-
         self.species_list = curate.get_species_list(self.assembly_summary,
                                                     self.test_species)
         self.species_dir = os.path.join(self.genbank_mirror, self.test_species)
-
         self.all_species_from_assembly_summary = self.assembly_summary.scientific_name[
             self.assembly_summary.scientific_name.notnull()]
         self.all_species_from_assembly_summary = set(
@@ -38,6 +35,7 @@ class TestCurate(unittest.TestCase):
         self.all_genomes_from_assembly_summary = self.assembly_summary.index[
             self.assembly_summary.scientific_name.notnull()]
 
+        os.mkdir(self.incoming)
         os.mkdir(self.species_dir)
 
     def test_get_species_list(self):
