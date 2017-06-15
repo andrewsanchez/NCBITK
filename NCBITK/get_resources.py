@@ -134,6 +134,8 @@ def get_resources(genbank_mirror, logger, update):
         names = get_scientific_names(genbank_mirror, assembly_summary)
         assembly_summary = update_assembly_summary(genbank_mirror,
                                                    assembly_summary, names)
+        assembly_summary = clean_up_assembly_summary(genbank_mirror,
+                                                     assembly_summary)
     else:
         assembly_summary = get_assembly_summary(genbank_mirror, update)
         logger.info('Using local assembly_summary.txt')
