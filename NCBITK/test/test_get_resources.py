@@ -26,6 +26,13 @@ class TestGetResources(unittest.TestCase):
         updated_assembly_summary = get_resources.update_assembly_summary(self.genbank_mirror, self.assembly_summary, names)
         self.assertIsInstance(updated_assembly_summary, pd.DataFrame)
 
+    def test_clean_up_assembly_summary(self):
+        clean_assembly_summary = get_resources.clean_up_assembly_summary(
+            self.genbank_mirror,
+            self.local_assembly_summary)
+        self.assertTrue(os.path.isfile(self.path_assembly_summary))
+        self.assertIsInstance(clean_assembly_summary, pd.DataFrame)
+
     def tearDown(self):
         shutil.rmtree(self.genbank_mirror)
 
