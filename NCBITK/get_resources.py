@@ -15,13 +15,13 @@ def get_assembly_summary(genbank_mirror,
                          assembly_summary_url=bacteria_assembly_summary):
     """Get current version of assembly_summary.txt and load into DataFrame"""
 
-    assembly_summary_dst = os.path.join(genbank_mirror, ".info",
+    path_assembly_summary = os.path.join(genbank_mirror, ".info",
                                         "assembly_summary.txt")
 
     if update:
-        urlretrieve(bacteria_assembly_summary, assembly_summary_dst)
         assembly_summary = pd.read_csv(
-            assembly_summary_dst, sep="\t", index_col=0, skiprows=1)
+            bacteria_assembly_summary, sep="\t", index_col=0, skiprows=1)
+        assembly_summary.to_csv(path_assembly_summary, sep='\t')
 
     else:
         assembly_summary = pd.read_csv(
