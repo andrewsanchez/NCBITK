@@ -25,24 +25,7 @@ def get_assembly_summary(genbank_mirror,
 
     else:
         assembly_summary = pd.read_csv(
-            assembly_summary_dst, sep="\t", index_col=0)
-
-    return assembly_summary
-
-
-def update_assembly_summary(genbank_mirror, assembly_summary, names):
-
-    # TODO: Very slow
-    for taxid in names.index:
-        scientific_name = names.scientific_name.loc[taxid]
-        # get the list of indices that share the same species_taxid in assembly_summary
-        ixs = assembly_summary.index[assembly_summary.species_taxid ==
-                                     taxid].tolist()
-        assembly_summary.loc[ixs, 'scientific_name'] = scientific_name
-
-    updated_assembly_summary = os.path.join(genbank_mirror, '.info',
-                                            'assembly_summary.txt')
-    assembly_summary.to_csv(updated_assembly_summary, sep='\t')
+            path_assembly_summary, sep="\t", index_col=0)
 
     return assembly_summary
 
@@ -77,6 +60,23 @@ def get_scientific_names(
     names.to_csv(names_dmp)
 
     return names
+
+
+def update_assembly_summary(genbank_mirror, assembly_summary, names):
+
+    # TODO: Very slow
+    for taxid in names.index:
+        scientific_name = names.scientific_name.loc[taxid]
+        # get the list of indices that share the same species_taxid in assembly_summary
+        ixs = assembly_summary.index[assembly_summary.species_taxid ==
+                                     taxid].tolist()
+        assembly_summary.loc[ixs, 'scientific_name'] = scientific_name
+
+    updated_assembly_summary_path = os.path.join(genbank_mirror, '.info',
+                                                 'assembly_summary.txt')
+    assembly_summary.to_csv(updated_assembly_summary_path, sep='\t')
+
+    return assembly_summary
 
 
 def clean_up_assembly_summary(genbank_mirror, assembly_summary):
