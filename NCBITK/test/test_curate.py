@@ -167,17 +167,18 @@ class TestCurate(unittest.TestCase):
 
     def test_rename(self):
         species_list = curate.get_species_list(self.assembly_summary, 'all')
+        correct_name = 'GCA_000007365.1_Buchnera_aphidicola_Sg_Schizaphis_graminum'
         for genome in self.all_genomes_from_assembly_summary:
             tempfile.mkstemp(
                 prefix=genome, suffix='.fasta', dir=self.genbank_mirror)
         curate.rename(self.genbank_mirror, self.assembly_summary)
-        renamed_genomes = len([x for x in os.listdir(self.genbank_mirror)
-                           if x.startswith('GCA')])
-        self.assertEqual(self.assembly_summary_len), renamed_genomes)
+        renamed_genomes = len([
+            x for x in os.listdir(self.genbank_mirror) if x.startswith('GCA')
+        ])
+        self.assertEqual(self.assembly_summary_len, renamed_genomes)
 
     def tearDown(self):
         shutil.rmtree(self.genbank_mirror)
-
 
 
 if __name__ == '__main__':
