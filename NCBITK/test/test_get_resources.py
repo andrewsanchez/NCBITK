@@ -14,16 +14,26 @@ class TestGetResources(unittest.TestCase):
         self.genbank_mirror = tempfile.mkdtemp(prefix='Genbank_')
         self.path_vars = config.instantiate_path_vars(self.genbank_mirror)
         self.info_dir, self.slurm, self.out, self.logger = self.path_vars
-        self.assembly_summary = get_resources.get_assembly_summary(self.genbank_mirror, True)
+        self.assembly_summary = get_resources.get_assembly_summary(
+            self.genbank_mirror, True)
         self.assertIsInstance(self.assembly_summary, pd.DataFrame)
+        self.local_assembly_summary = pd.read_csv(
+            'NCBITK/test/resources/assembly_summary.txt',
+            sep="\t",
+            index_col=0)
+        self.path_assembly_summary = os.path.join(self.info_dir,
+                                                  'assembly_summary.txt')
 
     def test_get_scientific_names(self):
-        names = get_resources.get_scientific_names(self.genbank_mirror, self.assembly_summary)
+        names = get_resources.get_scientific_names(self.genbank_mirror,
+                                                   self.assembly_summary)
         self.assertIsInstance(names, pd.DataFrame)
 
     def test_update_assembly_summary(self):
-        names = get_resources.get_scientific_names(self.genbank_mirror, self.assembly_summary)
-        updated_assembly_summary = get_resources.update_assembly_summary(self.genbank_mirror, self.assembly_summary, names)
+        names = get_resources.get_scientific_names(self.genbank_mirror,
+                                                   self.assembly_summary)
+        updated_assembly_summary = get_resources.update_assembly_summary(
+            self.genbank_mirror, self.assembly_summary, names)
         self.assertIsInstance(updated_assembly_summary, pd.DataFrame)
 
     def test_clean_up_assembly_summary(self):
