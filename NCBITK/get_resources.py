@@ -8,21 +8,16 @@ import tarfile
 from urllib.request import urlretrieve
 
 bacteria_assembly_summary = "ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt"
+taxdump_url = "ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz"
 
 
-def get_assembly_summary(genbank_mirror,
-                         update,
+def get_assembly_summary(update,
                          assembly_summary_url=bacteria_assembly_summary):
     """Get current version of assembly_summary.txt and load into DataFrame"""
-
-    path_assembly_summary = os.path.join(genbank_mirror, ".info",
-                                        "assembly_summary.txt")
 
     if update:
         assembly_summary = pd.read_csv(
             bacteria_assembly_summary, sep="\t", index_col=0, skiprows=1)
-        assembly_summary.to_csv(path_assembly_summary, sep='\t')
-
     else:
         assembly_summary = pd.read_csv(
             path_assembly_summary, sep="\t", index_col=0)
