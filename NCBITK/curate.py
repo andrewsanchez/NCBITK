@@ -165,19 +165,16 @@ def post_rsync_cleanup(genbank_mirror, assembly_summary, logger):
     shutil.rmtree(incoming)
 
 
-def rename(target_dir, assembly_summary):
+def rm_duplicates(seq):
     """
-    Clean up assembly_summary.txt and renamed FASTA's.
+    remove duplicate strings during renaming
     """
 
-    def rm_duplicates(seq):
-        """
-        remove duplicate strings during renaming
-        """
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if not (x in seen or seen_add(x))]
 
-        seen = set()
-        seen_add = seen.add
-        return [x for x in seq if not (x in seen or seen_add(x))]
+
 
 
     for root, dirs, files in os.walk(target_dir):
