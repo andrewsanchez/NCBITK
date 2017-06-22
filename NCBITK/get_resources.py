@@ -25,11 +25,7 @@ def get_assembly_summary(update,
     return assembly_summary
 
 
-def get_scientific_names(
-        genbank_mirror,
-        assembly_summary,
-        taxdump_url="ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz",
-        update=True):
+def get_scientific_names(genbank_mirror, assembly_summary, update=True):
     """
     Get names.dmp from the taxonomy dump
     """
