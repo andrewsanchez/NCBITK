@@ -68,10 +68,6 @@ def update_assembly_summary(assembly_summary, names):
                                      taxid].tolist()
         assembly_summary.loc[ixs, 'scientific_name'] = scientific_name
 
-    updated_assembly_summary_path = os.path.join(genbank_mirror, '.info',
-                                                 'assembly_summary.txt')
-    assembly_summary.to_csv(updated_assembly_summary_path, sep='\t')
-
     return assembly_summary
 
 
