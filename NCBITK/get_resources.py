@@ -63,7 +63,7 @@ def update_assembly_summary(genbank_mirror, assembly_summary, names):
     # TODO: Very slow
     for taxid in names.index:
         scientific_name = names.scientific_name.loc[taxid]
-        # get the list of indices that share the same species_taxid in assembly_summary
+        # get the list of indices that share the same species_taxid
         ixs = assembly_summary.index[assembly_summary.species_taxid ==
                                      taxid].tolist()
         assembly_summary.loc[ixs, 'scientific_name'] = scientific_name
