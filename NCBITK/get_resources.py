@@ -115,7 +115,7 @@ def clean_up_assembly_summary(genbank_mirror, assembly_summary):
 
 def get_resources(genbank_mirror, logger, update):
     """
-    Get assembly_summary.txt for bacteria and taxonomy dump file.
+    Get assembly summary and taxonomy dump file for bacteria.
     Parse and load into Pandas DataFrames.
     """
 
