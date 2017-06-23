@@ -33,6 +33,7 @@ def get_scientific_names(genbank_mirror, assembly_summary, update=True):
     info_dir = os.path.join(genbank_mirror, ".info")
     names_dmp = os.path.join(genbank_mirror, ".info", 'names.dmp')
 
+    # TODO: Create else statement to read local names.dmp
     if update:
         taxdump = urlretrieve(taxdump_url)
         taxdump_tar = tarfile.open(taxdump[0])
@@ -49,12 +50,14 @@ def get_scientific_names(genbank_mirror, assembly_summary, update=True):
     names.scientific_name.replace({' ': '_'}, regex=True, inplace=True)
     names.scientific_name.replace({'/': '_'}, regex=True, inplace=True)
     names.to_csv(names_dmp)
+        # TODO: Use fileinput instead of sed
 
     return names
 
 
 def update_assembly_summary(genbank_mirror, assembly_summary, names):
 
+    # TODO: Maybe keep separate from assembly_summary?
     # TODO: Very slow
     for taxid in names.index:
         scientific_name = names.scientific_name.loc[taxid]
