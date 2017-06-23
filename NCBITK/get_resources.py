@@ -71,45 +71,16 @@ def update_assembly_summary(assembly_summary, names):
     return assembly_summary
 
 
-def clean_up_assembly_summary(genbank_mirror, assembly_summary):
+def clean_up_assembly_summary(assembly_summary):
 
-    non_word_chars = [
-        '?', '=', '"', '!', '*', '>', '+', ':', '\x93', '´', '@', '“', ']',
-        '-', '’', ',', ')', '”', '&', '\x94', '\u200d', '/', '.', ';', '#',
-        '(', '%', '[', "'"
-    ]
-
-    # If both infraspecific_name and isolate are empty, fill infraspecific_name with "NA"
-    assembly_summary.update(assembly_summary['infraspecific_name'][(assembly_summary['infraspecific_name'].isnull()) &\
-            (assembly_summary['isolate'].isnull())].fillna('NA'))
-
-    # If infraspecific_name column is empty and isolate column is not empty, fill infraspecific_name with the value of isolate.
-    assembly_summary.update(assembly_summary['infraspecific_name'][(assembly_summary['infraspecific_name'].isnull()) &\
-            (assembly_summary['isolate'].notnull())].fillna(assembly_summary['isolate']))
-
-    # TODO: Rewrite using fileinput
-    assembly_summary.assembly_level.replace(
-        {
-            ' ': '_'
-        }, regex=True, inplace=True)
     assembly_summary.organism_name.replace(
-        {
-            ' ': '_'
-        }, regex=True, inplace=True)
-    assembly_summary.organism_name.replace(
-        {
-            '[\W]': '_'
-        }, regex=True, inplace=True)
+        '[\W]+', '_', regex=True, inplace=True)
     assembly_summary.infraspecific_name.replace(
-        {
-            '[\W]': '_'
-        }, regex=True, inplace=True)
-
-    # Extract organism_name column
-
-    updated_assembly_summary = os.path.join(genbank_mirror, '.info',
-                                            'assembly_summary.txt')
-    assembly_summary.to_csv(updated_assembly_summary, sep='\t')
+        '[\W]+', '_', regex=True, inplace=True)
+    assembly_summary.isolate.replace(
+        '[\W]+', '_', regex=True, inplace=True)
+    assembly_summary.assembly_level.replace(
+        '[\W]+', '_', regex=True, inplace=True)
     return assembly_summary
 
 
