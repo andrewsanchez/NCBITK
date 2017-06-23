@@ -39,18 +39,20 @@ def get_scientific_names(genbank_mirror, assembly_summary, update=True):
         taxdump_tar = tarfile.open(taxdump[0])
         taxdump_tar.extract('names.dmp', info_dir)
 
-    sed_cmd = "sed -i '/scientific name/!d' {}".format(
-        names_dmp)  # we only want rows with the scientific name
-    subprocess.Popen(sed_cmd, shell='True').wait()
-    names = pd.read_csv(
-        names_dmp, sep='\t', index_col=0, header=None, usecols=[0, 2])
-    names = names.loc[set(assembly_summary.species_taxid.tolist())]
-    names.index.name = 'species_taxid'
-    names.columns = ['scientific_name']
-    names.scientific_name.replace({' ': '_'}, regex=True, inplace=True)
-    names.scientific_name.replace({'/': '_'}, regex=True, inplace=True)
-    names.to_csv(names_dmp)
         # TODO: Use fileinput instead of sed
+        sed_cmd = "sed -i '/scientific name/!d' {}".format(
+            names_dmp)  # we only want rows with the scientific name
+        subprocess.Popen(sed_cmd, shell='True').wait()
+        names = pd.read_csv(
+            names_dmp, sep='\t', index_col=0, header=None, usecols=[0, 2])
+        names = names.loc[set(assembly_summary.species_taxid.tolist())]
+        names.index.name = 'species_taxid'
+        names.columns = ['scientific_name']
+        names.scientific_name.replace({' ': '_'}, regex=True, inplace=True)
+        names.scientific_name.replace({'/': '_'}, regex=True, inplace=True)
+        names.to_csv(names_dmp)
+    else:
+        names = pd.read_csv(names_dmp, index_col=0)
 
     return names
 
