@@ -57,7 +57,7 @@ def get_scientific_names(genbank_mirror, assembly_summary, update=True):
     return names
 
 
-def update_assembly_summary(genbank_mirror, assembly_summary, names):
+def update_assembly_summary(assembly_summary, names):
 
     # TODO: Maybe keep separate from assembly_summary?
     # TODO: Very slow
