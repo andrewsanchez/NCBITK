@@ -16,8 +16,8 @@ class TestCurate(unittest.TestCase):
         self.path_vars = config.instantiate_path_vars(self.genbank_mirror)
         self.incoming = os.path.join(self.genbank_mirror, 'incoming')
         self.info_dir, self.slurm, self.out, self.logger = self.path_vars
-        self.assembly_summary = pd.read_csv(
-            'NCBITK/test/resources/assembly_summary.txt',
+        self.original_assembly_summary = pd.read_csv(
+            'NCBITK/test/resources/original_assembly_summary.txt',
             sep="\t",
             index_col=0)
         self.assembly_summary_len = len(self.assembly_summary.index)
