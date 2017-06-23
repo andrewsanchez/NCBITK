@@ -90,6 +90,9 @@ def get_resources(genbank_mirror, update):
     Parse and load into Pandas DataFrames.
     """
 
+    # TODO: Might be better to write the csv outside of this function
+    path_assembly_summary = os.path.join(genbank_mirror, ".info",
+                                         "assembly_summary.txt")
     if update:
         assembly_summary = get_assembly_summary(genbank_mirror, update)
         names = get_scientific_names(genbank_mirror, assembly_summary)
