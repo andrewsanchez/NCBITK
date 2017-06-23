@@ -113,7 +113,7 @@ def clean_up_assembly_summary(genbank_mirror, assembly_summary):
     return assembly_summary
 
 
-def get_resources(genbank_mirror, logger, update):
+def get_resources(genbank_mirror, update):
     """
     Get assembly summary and taxonomy dump file for bacteria.
     Parse and load into Pandas DataFrames.
@@ -121,8 +121,6 @@ def get_resources(genbank_mirror, logger, update):
 
     if update:
         assembly_summary = get_assembly_summary(genbank_mirror, update)
-        logger.info('Got new assembly_summary.txt')
-
         names = get_scientific_names(genbank_mirror, assembly_summary)
         assembly_summary = update_assembly_summary(genbank_mirror,
                                                    assembly_summary, names)
@@ -130,9 +128,5 @@ def get_resources(genbank_mirror, logger, update):
                                                      assembly_summary)
     else:
         assembly_summary = get_assembly_summary(genbank_mirror, update)
-        logger.info('Using local assembly_summary.txt')
-
-    logger.info(
-        '{} genomes in assembly_summary.txt'.format(len(assembly_summary)))
 
     return assembly_summary
