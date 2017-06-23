@@ -21,6 +21,14 @@ class TestCurate(unittest.TestCase):
             sep="\t",
             index_col=0)
         self.assembly_summary_len = len(self.assembly_summary.index)
+        self.updated_assembly_summary = pd.read_csv(
+            'NCBITK/test/resources/updated_assembly_summary.txt',
+            sep="\t",
+            index_col=0)
+        self.updated_assembly_summary = get_resources.clean_up_assembly_summary(
+            self.updated_assembly_summary)
+        self.updated_assembly_summary_len = len(
+            self.updated_assembly_summary.index)
         self.test_species = 'Acinetobacter_nosocomialis'
         self.test_genomes = self.assembly_summary.index[
             self.assembly_summary.scientific_name == self.test_species]
