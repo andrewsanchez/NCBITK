@@ -3,6 +3,7 @@ from NCBITK import get_resources
 
 import unittest
 import os
+import re
 import glob
 import tempfile
 import shutil
@@ -38,10 +39,13 @@ class TestGetResources(unittest.TestCase):
 
     def test_clean_up_assembly_summary(self):
         clean_assembly_summary = get_resources.clean_up_assembly_summary(
-            self.genbank_mirror,
             self.local_assembly_summary)
-        self.assertTrue(os.path.isfile(self.path_assembly_summary))
         self.assertIsInstance(clean_assembly_summary, pd.DataFrame)
+        for i in clean_assembly_summary.infraspecific_name:
+            try:
+                self.assertFalse(re.match('.*=.*', i) is True)
+            except TypeError:
+                continue
 
     def tearDown(self):
         shutil.rmtree(self.genbank_mirror)

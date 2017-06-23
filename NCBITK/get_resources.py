@@ -100,6 +100,7 @@ def get_resources(genbank_mirror, update):
                                                    assembly_summary, names)
         assembly_summary = clean_up_assembly_summary(genbank_mirror,
                                                      assembly_summary)
+        assembly_summary.to_csv(path_assembly_summary, sep='\t')
     else:
         assembly_summary = get_assembly_summary(genbank_mirror, update)
 
