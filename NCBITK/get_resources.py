@@ -18,8 +18,12 @@ taxdump_url = "ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz"
 
 # TODO: Require the full path to local files instead of genbank mirror
 
+def get_assembly_summary(genbank_mirror, update,
                          assembly_summary_url=bacteria_assembly_summary):
     """Get current version of assembly_summary.txt and load into DataFrame"""
+
+    path_assembly_summary = os.path.join(genbank_mirror, ".info",
+                                         "assembly_summary.txt")
 
     if update:
         assembly_summary = pd.read_csv(
