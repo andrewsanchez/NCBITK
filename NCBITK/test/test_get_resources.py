@@ -34,7 +34,7 @@ class TestGetResources(unittest.TestCase):
         names = get_resources.get_scientific_names(self.genbank_mirror,
                                                    self.assembly_summary)
         updated_assembly_summary = get_resources.update_assembly_summary(
-            self.genbank_mirror, self.assembly_summary, names)
+            self.assembly_summary, names)
         self.assertIsInstance(updated_assembly_summary, pd.DataFrame)
 
     def test_clean_up_assembly_summary(self):
