@@ -185,6 +185,31 @@ def clean_up_name(name):
     return name
 
 
+def rename_genome(genome, assembly_summary):
+    """
+    Rename FASTA's.
+    """
+
+    genome_id = parse_genome_id(genome).group(0)
+    if genome_id in assembly_summary.index:
+        scientific_name = assembly_summary.get_value(
+            genome_id, 'scientific_name')
+        infraspecific_name = assembly_summary.get_value(
+            genome_id, 'infraspecific_name')
+        organism_name = assembly_summary.get_value(
+            genome_id, 'organism_name')
+        if type(infraspecific_name) == float:
+            infraspecific_name = ''
+        isolate = assembly_summary.get_value(
+            genome_id, 'isolate')
+        if type(isolate) == float:
+            isolate = ''
+        assembly_level = assembly_summary.get_value(
+            genome_id, 'assembly_level')
+        name = '{}_{}_{}_{}_{}_{}.fasta'.format(
+            genome_id, organism_name, scientific_name, infraspecific_name, isolate, assembly_level)
+        name = clean_up_name(name)
+        return name
     for root, dirs, files in os.walk(target_dir):
         for f in files:
             if re.match('GCA.*fasta', f):
