@@ -175,6 +175,14 @@ def rm_duplicates(seq):
     return [x for x in seq if not (x in seen or seen_add(x))]
 
 
+def clean_up_name(name):
+    rm_words = re.compile(
+        r'((?<=_)(sp|sub|substr|subsp|str|strain)(?=_))')
+    name = rm_words.sub('_', name)
+    name = re.sub('_+', '_', name)
+    name = rm_duplicates(name.split('_'))
+    name = '_'.join(name)
+    return name
 
 
     for root, dirs, files in os.walk(target_dir):
