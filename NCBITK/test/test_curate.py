@@ -25,7 +25,7 @@ class TestCurate(unittest.TestCase):
             'NCBITK/test/resources/updated_assembly_summary.txt',
             sep="\t",
             index_col=0)
-        self.updated_assembly_summary = get_resources.clean_up_assembly_summary(
+        get_resources.clean_up_assembly_summary(
             self.updated_assembly_summary)
         self.updated_assembly_summary_len = len(
             self.updated_assembly_summary.index)
