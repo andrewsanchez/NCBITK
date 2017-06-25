@@ -20,7 +20,6 @@ class TestCurate(unittest.TestCase):
             'NCBITK/test/resources/original_assembly_summary.txt',
             sep="\t",
             index_col=0)
-        self.assembly_summary_len = len(self.assembly_summary.index)
         self.updated_assembly_summary = pd.read_csv(
             'NCBITK/test/resources/updated_assembly_summary.txt',
             sep="\t",
@@ -44,7 +43,6 @@ class TestCurate(unittest.TestCase):
             self.updated_assembly_summary.scientific_name.notnull()]
 
         os.mkdir(self.incoming)
-        os.mkdir(self.species_dir)
 
     def test_get_species_list(self):
 
