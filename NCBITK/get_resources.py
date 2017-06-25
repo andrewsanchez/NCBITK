@@ -43,7 +43,6 @@ def get_scientific_names(genbank_mirror, assembly_summary, update=True):
     info_dir = os.path.join(genbank_mirror, ".info")
     names_dmp = os.path.join(genbank_mirror, ".info", 'names.dmp')
 
-    # TODO: Create else statement to read local names.dmp
     if update:
         taxdump = urlretrieve(taxdump_url)
         taxdump_tar = tarfile.open(taxdump[0])
@@ -69,8 +68,6 @@ def get_scientific_names(genbank_mirror, assembly_summary, update=True):
 
 def update_assembly_summary(assembly_summary, names):
 
-    # TODO: Maybe keep separate from assembly_summary?
-    # TODO: Very slow
     for taxid in names.index:
         scientific_name = names.scientific_name.loc[taxid]
         # get the list of indices that share the same species_taxid
@@ -100,16 +97,13 @@ def get_resources(genbank_mirror, update):
     Parse and load into Pandas DataFrames.
     """
 
-    # TODO: Might be better to write the csv outside of this function
     path_assembly_summary = os.path.join(genbank_mirror, ".info",
                                          "assembly_summary.txt")
     if update:
         assembly_summary = get_assembly_summary(genbank_mirror, update)
         names = get_scientific_names(genbank_mirror, assembly_summary)
-        assembly_summary = update_assembly_summary(genbank_mirror,
-                                                   assembly_summary, names)
-        assembly_summary = clean_up_assembly_summary(genbank_mirror,
-                                                     assembly_summary)
+        assembly_summary = update_assembly_summary(assembly_summary, names)
+        clean_up_assembly_summary(assembly_summary)
         assembly_summary.to_csv(path_assembly_summary, sep='\t')
     else:
         assembly_summary = get_assembly_summary(genbank_mirror, update)
