@@ -210,26 +210,14 @@ def rename_genome(genome, assembly_summary):
             genome_id, organism_name, scientific_name, infraspecific_name, isolate, assembly_level)
         name = clean_up_name(name)
         return name
+
+def rename_genbank(target_dir, assembly_summary):
+
     for root, dirs, files in os.walk(target_dir):
-        for f in files:
-            if re.match('GCA.*fasta', f):
-                genome_id = parse_genome_id(f).group(0)
-                if genome_id in assembly_summary.index:
-                    scientific_name = assembly_summary.get_value(
-                        genome_id, 'scientific_name')
-                    infraspecific_name = assembly_summary.get_value(
-                        genome_id, 'infraspecific_name')
-                    assembly_level = assembly_summary.get_value(
-                        genome_id, 'assembly_level')
-                    new_name = '{}_{}_{}_{}.fasta'.format(
-                        genome_id, scientific_name, infraspecific_name, assembly_level)
-                    rm_words = re.compile(
-                        r'((?<=_)(sp|sub|substr|subsp|str|strain)(?=_))')
-                    new_name = rm_words.sub('_', new_name)
-                    new_name = re.sub(r'_+', '_', new_name)
-                    new_name = new_name.split('_')
-                    new_name = rm_duplicates(new_name)
-                    new_name = '_'.join(new_name)
-                    old = os.path.join(root, f)
-                    new = os.path.join(root, new_name)
-                    os.rename(old, new)
+        genomes = [f for f in files if re.match('GCA.*fasta', f)]
+        for genome in genomes:
+            name = rename_genome(genome, assembly_summary)
+            if name:
+                old = os.path.join(root, genome)
+                new = os.path.join(root, name)
+                os.rename(old, new)
