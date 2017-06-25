@@ -86,6 +86,7 @@ class TestCurate(unittest.TestCase):
 
     def test_assess_changes(self):
 
+        os.mkdir(self.species_dir)
         curate.create_species_dirs(self.genbank_mirror, self.logger,
                                    self.species_list)
 
