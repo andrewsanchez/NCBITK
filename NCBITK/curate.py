@@ -34,7 +34,6 @@ def create_species_dirs(genbank_mirror, logger, species_list):
             continue
         if not os.path.isdir(species_dir):
             os.mkdir(species_dir)
-            logger.info("Directory created: {}".format(species))
 
 
 def parse_genome_id(genome):
