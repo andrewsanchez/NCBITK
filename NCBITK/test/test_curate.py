@@ -174,6 +174,9 @@ class TestCurate(unittest.TestCase):
     #     self.assertTrue(len(old_genomes) == 0)
     #     self.assertTrue(len(sketch_files) == 0)
 
+    def test_clean_up_assembly_summary(assembly_summary):
+        None
+
     def test_rename(self):
         species_list = curate.get_species_list(self.assembly_summary, 'all')
         correct_name = 'GCA_000007365.1_Buchnera_aphidicola_Sg_Schizaphis_graminum'
