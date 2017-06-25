@@ -54,9 +54,9 @@ class TestCurate(unittest.TestCase):
         all_species = curate.get_species_list(self.updated_assembly_summary,
                                               'all')
 
-        self.assertTrue(len(species_from_string), 1)
-        self.assertTrue(len(species_from_list), len(species_list))
-        self.assertTrue(
+        self.assertEqual(len(species_from_string), 1)
+        self.assertEqual(len(species_from_list), len(species_list))
+        self.assertEqual(
             len(all_species), len(self.all_species_from_assembly_summary))
 
     def test_create_species_dirs_all(self):
