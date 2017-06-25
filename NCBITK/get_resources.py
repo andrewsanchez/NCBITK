@@ -10,8 +10,14 @@ from urllib.request import urlretrieve
 bacteria_assembly_summary = "ftp://ftp.ncbi.nlm.nih.gov/genomes/genbank/bacteria/assembly_summary.txt"
 taxdump_url = "ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz"
 
+# TODO: Don't write the csvs inside of these functions
+# this will prevent needing to pass genbank_mirror
 
-def get_assembly_summary(update,
+# TODO: Keep names separate from assembly_summary
+# avoids the super slow update assembly function
+
+# TODO: Require the full path to local files instead of genbank mirror
+
                          assembly_summary_url=bacteria_assembly_summary):
     """Get current version of assembly_summary.txt and load into DataFrame"""
 
