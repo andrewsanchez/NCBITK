@@ -4,25 +4,23 @@ import re
 import logging
 import shutil
 import pandas as pd
+from io import TextIOWrapper
 
 
 def get_species(assembly_summary, species):
 
-    if species_list == "all":
-
-        species_list = assembly_summary.scientific_name[
+    if not species:
+        species = assembly_summary.scientific_name[
             assembly_summary.scientific_name.notnull()]
-        species_list = set(species_list.tolist())
+        species = set(species.tolist())
+        return species
 
-        return species_list
+    elif type(species) is tuple:
+        return species
 
-    elif type(species_list) is list:
-
-        return species_list
-
-    elif type(species_list) is str:
-
-        return [species_list]
+    elif type(species) is TextIOWrapper:
+        species = [name.strip() for name in species]
+        return species
 
 
 def create_species_dirs(genbank_mirror, logger, species_list):
