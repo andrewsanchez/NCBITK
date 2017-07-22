@@ -169,9 +169,6 @@ class TestCurate(unittest.TestCase):
     #     self.assertTrue(len(old_genomes) == 0)
     #     self.assertTrue(len(sketch_files) == 0)
 
-    def test_clean_up_assembly_summary(assembly_summary):
-        None
-
     def test_rename(self):
         genomes = [
             ('GCA_000009245.1',
