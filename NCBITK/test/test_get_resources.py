@@ -38,10 +38,10 @@ class TestGetResources(unittest.TestCase):
         self.assertIsInstance(updated_assembly_summary, pd.DataFrame)
 
     def test_clean_up_assembly_summary(self):
-        clean_assembly_summary = get_resources.clean_up_assembly_summary(
+        get_resources.clean_up_assembly_summary(
             self.local_assembly_summary)
-        self.assertIsInstance(clean_assembly_summary, pd.DataFrame)
-        for i in clean_assembly_summary.infraspecific_name:
+        self.assertIsInstance(self.local_assembly_summary, pd.DataFrame)
+        for i in self.local_assembly_summary.infraspecific_name:
             try:
                 self.assertFalse(re.match('.*=.*', i) is True)
             except TypeError:
