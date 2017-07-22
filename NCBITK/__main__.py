@@ -9,7 +9,7 @@ def setup(genbank_mirror, species_list, update_assembly_summary):
 
     path_vars = config.instantiate_path_vars(genbank_mirror)
     info_dir, slurm, out, logger = path_vars
-    assembly_summary = get_resources.get_resources(genbank_mirror, logger,
+    assembly_summary = get_resources.get_resources(genbank_mirror,
                                                    update_assembly_summary)
     species = curate.get_species_list(assembly_summary, species_list)
     genbank_status = curate.assess_genbank_mirror(
