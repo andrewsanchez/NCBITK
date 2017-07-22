@@ -4,25 +4,23 @@ import re
 import logging
 import shutil
 import pandas as pd
+from io import TextIOWrapper
 
 
-def get_species_list(assembly_summary, species_list):
+def get_species(assembly_summary, species):
 
-    if species_list == "all":
-
-        species_list = assembly_summary.scientific_name[
+    if not species:
+        species = assembly_summary.scientific_name[
             assembly_summary.scientific_name.notnull()]
-        species_list = set(species_list.tolist())
+        species = set(species.tolist())
+        return species
 
-        return species_list
+    elif type(species) is tuple:
+        return species
 
-    elif type(species_list) is list:
-
-        return species_list
-
-    elif type(species_list) is str:
-
-        return [species_list]
+    elif type(species) is TextIOWrapper:
+        species = [name.strip() for name in species]
+        return species
 
 
 def create_species_dirs(genbank_mirror, logger, species_list):
@@ -34,7 +32,6 @@ def create_species_dirs(genbank_mirror, logger, species_list):
             continue
         if not os.path.isdir(species_dir):
             os.mkdir(species_dir)
-            logger.info("Directory created: {}".format(species))
 
 
 def parse_genome_id(genome):
@@ -134,7 +131,7 @@ def unzip_genome(root, f, genome_id):
     unzipped.close()
 
 
-def unzip_genbank_mirror(genbank_mirror):
+def unzip_genbank(genbank_mirror):
 
     for root, dirs, files in os.walk(genbank_mirror):
         for f in files:
@@ -165,65 +162,59 @@ def post_rsync_cleanup(genbank_mirror, assembly_summary, logger):
     shutil.rmtree(incoming)
 
 
-def rename(target_dir, assembly_summary):
+def rm_duplicates(seq):
     """
-    Clean up assembly_summary.txt and renamed FASTA's.
+    remove duplicate strings during renaming
     """
 
-    def rm_duplicates(seq):
-        """
-        remove duplicate strings during renaming
-        """
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if not (x in seen or seen_add(x))]
 
-        seen = set()
-        seen_add = seen.add
-        return [x for x in seq if not (x in seen or seen_add(x))]
 
-    # If infraspecific_name and isolate columns are empty, fill infraspecific_name with "NA"
-    assembly_summary.update(assembly_summary['infraspecific_name'][(assembly_summary['infraspecific_name'].isnull()) &\
-            (assembly_summary['isolate'].isnull())].fillna('NA'))
+def clean_up_name(name):
+    rm_words = re.compile(
+        r'((?<=_)(sp|sub|substr|subsp|str|strain)(?=_))')
+    name = rm_words.sub('_', name)
+    name = re.sub('_+', '_', name)
+    name = rm_duplicates(name.split('_'))
+    name = '_'.join(name)
+    return name
 
-    # If infraspecific_name column is empty and isolate column is not empty, fill infraspecific_name with the value of isolate.
-    assembly_summary.update(assembly_summary['infraspecific_name'][(assembly_summary['infraspecific_name'].isnull()) &\
-            (assembly_summary['isolate'].notnull())].fillna(assembly_summary['isolate']))
 
-    assembly_summary.assembly_level.replace(
-        {
-            ' ': '_'
-        }, regex=True, inplace=True)
-    assembly_summary.organism_name.replace(
-        {
-            ' ': '_'
-        }, regex=True, inplace=True)
-    assembly_summary.organism_name.replace(
-        {
-            '[\W]': '_'
-        }, regex=True, inplace=True)
-    assembly_summary.infraspecific_name.replace(
-        {
-            '[\W]': '_'
-        }, regex=True, inplace=True)
+def rename_genome(genome, assembly_summary):
+    """
+    Rename FASTA's.
+    """
+
+    genome_id = parse_genome_id(genome).group(0)
+    if genome_id in assembly_summary.index:
+        scientific_name = assembly_summary.get_value(
+            genome_id, 'scientific_name')
+        infraspecific_name = assembly_summary.get_value(
+            genome_id, 'infraspecific_name')
+        organism_name = assembly_summary.get_value(
+            genome_id, 'organism_name')
+        if type(infraspecific_name) == float:
+            infraspecific_name = ''
+        isolate = assembly_summary.get_value(
+            genome_id, 'isolate')
+        if type(isolate) == float:
+            isolate = ''
+        assembly_level = assembly_summary.get_value(
+            genome_id, 'assembly_level')
+        name = '{}_{}_{}_{}_{}_{}.fasta'.format(
+            genome_id, organism_name, scientific_name, infraspecific_name, isolate, assembly_level)
+        name = clean_up_name(name)
+        return name
+
+def rename_genbank(target_dir, assembly_summary):
 
     for root, dirs, files in os.walk(target_dir):
-        for f in files:
-            if re.match('GCA.*fasta', f):
-                genome_id = parse_genome_id(f).group(0)
-                if genome_id in assembly_summary.index:
-                    org_name = assembly_summary.get_value(
-                        genome_id, 'scientific_name')
-                    strain = assembly_summary.get_value(
-                        genome_id, 'infraspecific_name')
-                    assembly_level = assembly_summary.get_value(
-                        genome_id, 'assembly_level')
-                    new_name = '{}_{}_{}_{}.fasta'.format(
-                        genome_id, org_name, strain, assembly_level)
-                    rm_words = re.compile(
-                        r'((?<=_)(sp|sub|substr|subsp|str|strain)(?=_))')
-                    new_name = rm_words.sub('_', new_name)
-                    new_name = re.sub(r'_+', '_', new_name)
-                    new_name = new_name.split('_')
-                    new_name = rm_duplicates(new_name)
-                    new_name = '_'.join(new_name)
-                    old = os.path.join(root, f)
-                    new = os.path.join(root, new_name)
-                    os.rename(old, new)
+        genomes = [f for f in files if re.match('GCA.*fasta', f)]
+        for genome in genomes:
+            name = rename_genome(genome, assembly_summary)
+            if name:
+                old = os.path.join(root, genome)
+                new = os.path.join(root, name)
+                os.rename(old, new)
