@@ -3,9 +3,7 @@ import os
 import shutil
 import tempfile
 import unittest
-
 import pandas as pd
-
 from NCBITK import config, curate, get_resources, sync
 
 
@@ -28,11 +26,11 @@ class TestCurate(unittest.TestCase):
             self.updated_assembly_summary)
         self.updated_assembly_summary_len = len(
             self.updated_assembly_summary.index)
-        self.test_species = 'Acinetobacter_nosocomialis'
+        self.test_species = 'Buchnera_aphidicola'
         self.test_genomes = self.updated_assembly_summary.index[
             self.updated_assembly_summary.scientific_name == self.test_species]
-        self.species_list = curate.get_species_list(
-            self.updated_assembly_summary, self.test_species)
+        self.species_list = curate.get_species(
+            self.updated_assembly_summary, tuple([self.test_species]))
         self.species_dir = os.path.join(self.genbank_mirror, self.test_species)
         self.all_species_from_assembly_summary = self.updated_assembly_summary.scientific_name[
             self.updated_assembly_summary.scientific_name.notnull()]
@@ -44,25 +42,22 @@ class TestCurate(unittest.TestCase):
 
         os.mkdir(self.incoming)
 
-    def test_get_species_list(self):
+    def test_get_species(self):
 
-        species_list = ['Bacillus_anthracis', 'Escherichia_coli']
-        species_from_string = curate.get_species_list(
-            self.updated_assembly_summary, self.test_species)
-        species_from_list = curate.get_species_list(
+        species_list = ( 'Bacillus_anthracis', 'Escherichia_coli' )
+        species_from_list = curate.get_species(
             self.updated_assembly_summary, species_list)
-        all_species = curate.get_species_list(self.updated_assembly_summary,
-                                              'all')
+        all_species = curate.get_species(self.updated_assembly_summary,
+                                              False)
 
-        self.assertEqual(len(species_from_string), 1)
         self.assertEqual(len(species_from_list), len(species_list))
         self.assertEqual(
             len(all_species), len(self.all_species_from_assembly_summary))
 
     def test_create_species_dirs_all(self):
 
-        species_list = curate.get_species_list(self.updated_assembly_summary,
-                                               'all')
+        species_list = curate.get_species(self.updated_assembly_summary,
+                                               False)
         curate.create_species_dirs(self.genbank_mirror, self.logger,
                                    species_list)
         local_species = os.listdir(self.genbank_mirror)
