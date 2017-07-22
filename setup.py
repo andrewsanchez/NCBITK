@@ -17,6 +17,7 @@ setup(
     url='https://github.com/andrewsanchez/NCBITK',
     keywords='NCBI bioinformatics',
     install_requires=[
+        'click',
         'numpy>=1.12.0',
         'biopython>=1.68',
         'pandas>=0.19.2',
