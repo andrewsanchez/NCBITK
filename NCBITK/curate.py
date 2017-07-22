@@ -6,7 +6,7 @@ import shutil
 import pandas as pd
 
 
-def get_species_list(assembly_summary, species_list):
+def get_species(assembly_summary, species):
 
     if species_list == "all":
 
@@ -133,7 +133,7 @@ def unzip_genome(root, f, genome_id):
     unzipped.close()
 
 
-def unzip_genbank_mirror(genbank_mirror):
+def unzip_genbank(genbank_mirror):
 
     for root, dirs, files in os.walk(genbank_mirror):
         for f in files:

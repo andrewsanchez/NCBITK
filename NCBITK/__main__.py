@@ -5,13 +5,12 @@ import os
 from NCBITK import config, curate, get_resources, sync
 
 
-def setup(genbank_mirror, species_list, update_assembly_summary):
-
+def setup(genbank_mirror, species, update_assembly_summary):
     path_vars = config.instantiate_path_vars(genbank_mirror)
     info_dir, slurm, out, logger = path_vars
     assembly_summary = get_resources.get_resources(genbank_mirror,
                                                    update_assembly_summary)
-    species = curate.get_species_list(assembly_summary, species_list)
+    species = curate.get_species(assembly_summary, species)
     genbank_status = curate.assess_genbank_mirror(
         genbank_mirror, assembly_summary, species, logger)
 
@@ -19,18 +18,18 @@ def setup(genbank_mirror, species_list, update_assembly_summary):
 
 
 def update(genbank_mirror, genbank_status, path_vars, assembly_summary,
-           species_list):
+           species):
 
     info_dir, slurm, out, logger = path_vars
     curate.create_species_dirs(genbank_mirror, assembly_summary, logger,
-                               species_list)
+                               species)
     local_genomes, new_genomes, old_genomes = genbank_status
 
     curate.remove_old_genomes(genbank_mirror, assembly_summary, old_genomes,
                               logger)
     sync.sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes,
                              logger)
-    curate.unzip_genbank_mirror(genbank_mirror)
+    curate.unzip_genbank(genbank_mirror)
     rename.rename(genbank_mirror, assembly_summary)
 
 
