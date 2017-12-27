@@ -88,6 +88,8 @@ def clean_up_assembly_summary(assembly_summary):
         '[\W]+', '_', regex=True, inplace=True)
     assembly_summary.assembly_level.replace(
         '[\W]+', '_', regex=True, inplace=True)
+    assembly_summary.scientific_name.replace(
+        '[\W]+', '_', regex=True, inplace=True)
 
 
 def get_resources(genbank_mirror, update):
