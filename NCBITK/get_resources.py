@@ -86,8 +86,8 @@ def clean_up_assembly_summary(assembly_summary):
 
     cols = ["organism_name", "infraspecific_name", "isolate", "assembly_level"]
     for col in cols:
-        assembly_summary.col.replace('[\W]+', '_', regex=True, inplace=True)
-        assembly_summary.col.replace('[_]+', '_', regex=True, inplace=True)
+        assembly_summary[col].replace('[\W]+', '_', regex=True, inplace=True)
+        assembly_summary[col].replace('[_]+', '_', regex=True, inplace=True)
 
 
 def get_resources(genbank_mirror, update):

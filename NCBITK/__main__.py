@@ -17,22 +17,6 @@ def setup(genbank_mirror, species, update_assembly_summary):
     return path_vars, assembly_summary, species, genbank_status
 
 
-def update(genbank_mirror, genbank_status, path_vars, assembly_summary,
-           species):
-
-    info_dir, slurm, out, logger = path_vars
-    curate.create_species_dirs(genbank_mirror, assembly_summary, logger,
-                               species)
-    local_genomes, new_genomes, old_genomes = genbank_status
-
-    curate.remove_old_genomes(genbank_mirror, assembly_summary, old_genomes,
-                              logger)
-    sync.sync_latest_genomes(genbank_mirror, assembly_summary, new_genomes,
-                             logger)
-    curate.unzip_genbank(genbank_mirror)
-    rename.rename(genbank_mirror, assembly_summary)
-
-
 def show_genbank_status(genbank_status):
 
     local_genomes, new_genomes, old_genomes = genbank_status
@@ -75,6 +59,7 @@ def main(update, update_assembly, from_file, status, genbank, species):
         curate.post_rsync_cleanup(genbank, assembly_summary, logger)
         curate.unzip_genbank(genbank)
         curate.rename_genbank(genbank, assembly_summary)
+
 
 if __name__ == '__main__':
     main()
