@@ -18,6 +18,7 @@ taxdump_url = "ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz"
 
 # TODO: Require the full path to local files instead of genbank mirror
 
+
 def get_assembly_summary(genbank_mirror, update,
                          assembly_summary_url=bacteria_assembly_summary):
     """Get current version of assembly_summary.txt and load into DataFrame"""
@@ -80,20 +81,13 @@ def update_assembly_summary(assembly_summary, names):
 
 def clean_up_assembly_summary(assembly_summary):
 
-    # TODO: The below can likely be replaced with:
-    # assembly_summary.replace({"[\W]+": "_"}, regex=True, inplace=True)
-    # assembly_summary.replace({"[_]+": "_"}, regex=True, inplace=True)
+    # TODO: Do this in a for loop and include replacement pattern:
+    # "[_]+", "_"
 
-    assembly_summary.organism_name.replace(
-        '[\W]+', '_', regex=True, inplace=True)
-    assembly_summary.infraspecific_name.replace(
-        '[\W]+', '_', regex=True, inplace=True)
-    assembly_summary.isolate.replace(
-        '[\W]+', '_', regex=True, inplace=True)
-    assembly_summary.assembly_level.replace(
-        '[\W]+', '_', regex=True, inplace=True)
-    assembly_summary.scientific_name.replace(
-        '[\W]+', '_', regex=True, inplace=True)
+    cols = ["organism_name", "infraspecific_name", "isolate", "assembly_level"]
+    for col in cols:
+        assembly_summary.col.replace('[\W]+', '_', regex=True, inplace=True)
+        assembly_summary.col.replace('[_]+', '_', regex=True, inplace=True)
 
 
 def get_resources(genbank_mirror, update):
