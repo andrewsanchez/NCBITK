@@ -57,8 +57,8 @@ def get_scientific_names(genbank_mirror, assembly_summary, update=True):
         names = names.loc[set(assembly_summary.species_taxid.tolist())]
         names.index.name = 'species_taxid'
         names.columns = ['scientific_name']
-        names.scientific_name.replace({' ': '_'}, regex=True, inplace=True)
-        names.scientific_name.replace({'/': '_'}, regex=True, inplace=True)
+        names.scientific_name.replace('[\W]+', '_', regex=True, inplace=True)
+        names.scientific_name.replace('[_]+', '_', regex=True, inplace=True)
         names.to_csv(names_dmp)
     else:
         names = pd.read_csv(names_dmp, index_col=0)
@@ -79,6 +79,10 @@ def update_assembly_summary(assembly_summary, names):
 
 
 def clean_up_assembly_summary(assembly_summary):
+
+    # TODO: The below can likely be replaced with:
+    # assembly_summary.replace({"[\W]+": "_"}, regex=True, inplace=True)
+    # assembly_summary.replace({"[_]+": "_"}, regex=True, inplace=True)
 
     assembly_summary.organism_name.replace(
         '[\W]+', '_', regex=True, inplace=True)
